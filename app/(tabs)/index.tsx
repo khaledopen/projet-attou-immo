@@ -1,251 +1,294 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../../api/config';
 
-const StatCard = ({ title, value, icon, color }) => (
-  <View style={[styles.statCard, { borderLeftColor: color }]}>
-    <View style={styles.statInfo}>
-      <Text style={styles.statTitle}>{title}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
-    <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
-      <Ionicons name={icon} size={24} color={color} />
-    </View>
-  </View>
-);
+const OwnerDashboard = () => {
+  const router = useRouter();
+  const [stats, setStats] = useState({ properties: 0, visits: 0 });
+  const [recentVisits, setRecentVisits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-export default function OwnerDashboard() {
+  const fetchData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Fetch properties to count them
+      const propsRes = await axios.get(`${BASE_URL}/properties`, { params: { ownerId: 'my' } }); // Logic in controller needs to support owner filtering
+      
+      // Fetch visits
+      const visitsRes = await axios.get(`${BASE_URL}/visits/owner`, { headers });
+      
+      setStats({
+        properties: propsRes.data.length,
+        visits: visitsRes.data.length
+      });
+      setRecentVisits(visitsRes.data.slice(0, 3));
+    } catch (error) {
+      console.error('Erreur dashboard:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#1e3a8a" />
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Tableau de bord</Text>
-          <Text style={styles.title}>Propriétaire</Text>
+          <Text style={styles.welcomeText}>Tableau de bord</Text>
+          <Text style={styles.brandText}>AttouNest Pro 💼</Text>
         </View>
-        <TouchableOpacity style={styles.addBtn}>
-          <Ionicons name="add" size={28} color="#fff" />
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push('/add-property')}
+        >
+          <Ionicons name="add" size={30} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.statsGrid}>
-          <StatCard title="Mes Biens" value="12" icon="home" color="#065f46" />
-          <StatCard title="Visites" value="08" icon="calendar" color="#d97706" />
-          <StatCard title="Messages" value="24" icon="chatbubbles" color="#2563eb" />
-          <StatCard title="Revenus" value="4.2M" icon="cash" color="#7c3aed" />
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.properties}</Text>
+          <Text style={styles.statLabel}>Mes Biens</Text>
         </View>
+        <View style={[styles.statCard, { backgroundColor: '#1e3a8a' }]}>
+          <Text style={[styles.statValue, { color: '#fff' }]}>{stats.visits}</Text>
+          <Text style={[styles.statLabel, { color: '#bfdbfe' }]}>Visites reçues</Text>
+        </View>
+      </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Demandes de visite</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>Tout voir</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Demandes récentes</Text>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/visits')}>
+          <Text style={styles.seeMore}>Voir tout</Text>
+        </TouchableOpacity>
+      </View>
 
-          {[1, 2, 3].map(i => (
-            <View key={i} style={styles.visitItem}>
-              <View style={styles.visitLeft}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{String.fromCharCode(64 + i)}</Text>
-                </View>
-                <View>
-                  <Text style={styles.visitorName}>Visiteur {i}</Text>
-                  <Text style={styles.propertyName}>Appartement Riviera {i}</Text>
-                </View>
-              </View>
-              <View style={styles.visitRight}>
-                <TouchableOpacity style={styles.acceptBtn}>
-                  <Ionicons name="checkmark" size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.declineBtn}>
-                  <Ionicons name="close" size={18} color="#ef4444" />
-                </TouchableOpacity>
-              </View>
+      {recentVisits.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="calendar-outline" size={48} color="#cbd5e1" />
+          <Text style={styles.emptyText}>Aucune demande de visite pour le moment.</Text>
+        </View>
+      ) : (
+        recentVisits.map((visit) => (
+          <View key={visit.id} style={styles.visitCard}>
+            <View style={styles.visitInfo}>
+              <Text style={styles.tenantName}>{visit.tenant.prenom} {visit.tenant.nom}</Text>
+              <Text style={styles.propertyName}>{visit.annonce.titre}</Text>
+              <Text style={styles.visitDate}>
+                <Ionicons name="time-outline" size={12} /> {new Date(visit.dateProposee).toLocaleDateString('fr-FR')}
+              </Text>
             </View>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Performance mensuelle</Text>
-          <View style={styles.chartPlaceholder}>
-            <Ionicons name="stats-chart" size={40} color="#e2e8f0" />
-            <Text style={styles.chartText}>Graphique de performance</Text>
+            <View style={[styles.statusBadge, visit.statut === 'ACCEPTEE' ? styles.statusAccepted : styles.statusPending]}>
+              <Text style={[styles.statusText, visit.statut === 'ACCEPTEE' ? styles.statusTextAccepted : styles.statusTextPending]}>
+                {visit.statut}
+              </Text>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        ))
+      )}
+
+      <TouchableOpacity 
+        style={styles.quickAction}
+        onPress={() => router.push('/add-property')}
+      >
+        <Ionicons name="home-outline" size={24} color="#1e3a8a" />
+        <Text style={styles.quickActionText}>Publier une nouvelle annonce</Text>
+        <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+      </TouchableOpacity>
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-    paddingTop: 40,
+  },
+  contentContainer: {
+    padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 30,
   },
-  greeting: {
-    fontSize: 14,
+  welcomeText: {
+    fontSize: 16,
     color: '#64748b',
+    fontWeight: '500',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
+  brandText: {
+    fontSize: 26,
     color: '#0f172a',
+    fontWeight: '800',
   },
-  addBtn: {
-    backgroundColor: '#065f46',
+  addButton: {
     width: 50,
     height: 50,
-    borderRadius: 16,
+    backgroundColor: '#1e3a8a',
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#065f46',
+    shadowColor: '#1e3a8a',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-    elevation: 6,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    elevation: 5,
   },
   statsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
+    gap: 15,
+    marginBottom: 30,
   },
   statCard: {
+    flex: 1,
     backgroundColor: '#fff',
-    width: '48%',
-    padding: 16,
-    borderRadius: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statTitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 4,
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1e293b',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#1e3a8a',
   },
-  statIconContainer: {
-    padding: 8,
-    borderRadius: 12,
-  },
-  section: {
-    marginBottom: 24,
+  statLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+    marginTop: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 16,
+    color: '#1e293b',
   },
-  seeAll: {
-    color: '#065f46',
-    fontSize: 14,
+  seeMore: {
+    color: '#1e3a8a',
     fontWeight: '600',
+    fontSize: 14,
   },
-  visitItem: {
+  visitCard: {
+    flexDirection: 'row',
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 15,
     borderRadius: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  visitLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+  visitInfo: {
+    flex: 1,
   },
-  avatarText: {
+  tenantName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#065f46',
-  },
-  visitorName: {
-    fontSize: 14,
-    fontWeight: '600',
     color: '#1e293b',
   },
   propertyName: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748b',
+    marginTop: 2,
   },
-  visitRight: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  acceptBtn: {
-    backgroundColor: '#065f46',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  declineBtn: {
-    backgroundColor: '#fef2f2',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chartPlaceholder: {
-    height: 150,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-  },
-  chartText: {
-    color: '#94a3b8',
+  visitDate: {
     fontSize: 12,
-    marginTop: 8,
+    color: '#94a3b8',
+    marginTop: 6,
   },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  statusPending: {
+    backgroundColor: '#fff7ed',
+  },
+  statusAccepted: {
+    backgroundColor: '#f0fdf4',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  statusTextPending: {
+    color: '#ea580c',
+  },
+  statusTextAccepted: {
+    color: '#16a34a',
+  },
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 24,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  quickActionText: {
+    flex: 1,
+    marginLeft: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    marginBottom: 20,
+  },
+  emptyText: {
+    marginTop: 10,
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
+  }
 });
+
+export default OwnerDashboard;
