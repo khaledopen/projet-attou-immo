@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+
+enum StatutCompte {
+  ACTIF
+  SUSPENDU
+  DESACTIVE
+}
+
+enum TypeBailleur {
+  PARTICULIER
+  AGENCE
+  PROMOTEUR
+}
+
+enum StatutDemande {
+  EN_ATTENTE
+  ACCEPTEE
+  REFUSEE
+  ANNULEE
+}
+
+enum StatutAnnonce {
+  EN_ATTENTE
+  PUBLIEE
+  ARCHIVEE
+  REJETEE
+  SUSPENDUE
+}
+
+enum TypeBien {
+  APPARTEMENT
+  MAISON
+  STUDIO
+  VILLA
+  CHAMBRE
+}
+
+enum Role {
+  LOCATAIRE
+  PROPRIETAIRE
+  ADMIN
+}
+
+// --- TABLES ---
+
+model User {
+  id               String        @id @default(uuid())
+  nom              String
+  prenom           String
+  email            String        @unique
+  motDePasse       String
+  telephone        String?
+  dateInscription  DateTime      @default(now())
+  statut           StatutCompte  @default(ACTIF)
+  role             Role          @default(LOCATAIRE)
+
+  // Champs spécifiques Locataire
+  historiqueRecherches String[]  // Liste de strings
+
+  // Champs spécifiques Propriétaire
+  raisonSociale    String?
+  typeBailleur     TypeBailleur?
+
+  // Champs spécifiques Administrateur
+  niveauAcces      Int?          @default(1)
+
+  // Relations
+  annonces         Annonce[]     @relation("ProprietaireAnnonces")
+  demandesVisites  DemandeVisite[]
+  notifications    Notification[]
+
+  @@map("utilisateurs")
+}
+
+model Annonce {
+  id               String        @id @default(uuid())
+  titre            String
+  description      String
+  prix             Float
+  surface          Float
+  nombrePieces     Int
+  typeBien         TypeBien
+  statut           StatutAnnonce @default(EN_ATTENTE)
+  datePublication  DateTime      @default(now())
+  dateModification DateTime      @updatedAt
+
+  // Relations
+  proprietaireId   String
+  proprietaire     User          @relation("ProprietaireAnnonces", fields: [proprietaireId], references: [id])
+  
+  bienId           String        @unique
+  bien             Bien          @relation(fields: [bienId], references: [id])
+  
+  photos           Photo[]
+  demandesVisites  DemandeVisite[]
+
+  @@map("annonces")
+}
+
+model Bien {
+  id               String        @id @default(uuid())
+  typeBien         TypeBien
+  surface          Float
+  etage            Int?
+  nombreChambres   Int
+  equipements      String[]      // Liste de strings (ex: ["Wifi", "Piscine"])
+  anneeConstruction Int?
+
+  // Adresse imbriquée ou liée
+  adresseId        String        @unique
+  adresse          Adresse       @relation(fields: [adresseId], references: [id])
+
+  annonce          Annonce?
+
+  @@map("biens")
+}
+
+model Adresse {
+  id               String        @id @default(uuid())
+  rue              String
+  ville            String
+  codePostal       String?
+  pays             String        @default("Côte d'Ivoire")
+  latitude         Float?
+  longitude        Float?
+
+  bien             Bien?
+
+  @@map("adresses")
+}
+
+model Photo {
+  id               String        @id @default(uuid())
+  url              String
+  ordre            Int           @default(0)
+  description      String?
+
+  annonceId        String
+  annonce          Annonce       @relation(fields: [annonceId], references: [id])
+
+  @@map("photos")
+}
+
+model DemandeVisite {
+  id               String        @id @default(uuid())
+  dateProposee     DateTime
+  message          String?
+  statut           StatutDemande @default(EN_ATTENTE)
+  dateCreation     DateTime      @default(now())
+
+  // Relations
+  locataireId      String
+  locataire        User          @relation(fields: [locataireId], references: [id])
+  
+  annonceId        String
+  annonce          Annonce       @relation(fields: [annonceId], references: [id])
+
+  @@map("demandes_visites")
+}
+
+model Notification {
+  id               String        @id @default(uuid())
+  titre            String
+  contenu          String
+  lu               Boolean       @default(false)
+  dateCreation     DateTime      @default(now())
+
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
