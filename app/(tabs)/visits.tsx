@@ -51,11 +51,11 @@ const OwnerVisits = () => {
         </View>
       </View>
       
-      <Text style={styles.propertyTitle}>{item.annonce.titre}</Text>
+      <Text style={styles.propertyTitle}>{item.annonce?.titre || 'Annonce'}</Text>
       
       <View style={styles.tenantInfo}>
         <Ionicons name="person-circle-outline" size={20} color="#64748b" />
-        <Text style={styles.tenantName}>{item.locataire.prenom} {item.locataire.nom}</Text>
+        <Text style={styles.tenantName}>{item.locataire?.prenom || 'Locataire'} {item.locataire?.nom || ''}</Text>
       </View>
 
       {item.statut === 'EN_ATTENTE' && (
@@ -71,7 +71,7 @@ const OwnerVisits = () => {
     </View>
   );
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#1e3a8a" />;
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#0ea5e9" />;
 
   return (
     <View style={styles.container}>
@@ -92,7 +92,7 @@ const OwnerVisits = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   header: { padding: 25, paddingTop: 60, backgroundColor: '#fff' },
-  headerTitle: { fontSize: 24, fontWeight: '900', color: '#1e3a8a' },
+  headerTitle: { fontSize: 24, fontWeight: '900', color: '#0ea5e9' },
   list: { padding: 20 },
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   tenantName: { marginLeft: 8, fontSize: 14, color: '#64748b', fontWeight: '600' },
   actions: { flexDirection: 'row', gap: 10 },
   btnReject: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#fee2e2', alignItems: 'center' },
-  btnAccept: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: '#1e3a8a', alignItems: 'center' },
+  btnAccept: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: '#0ea5e9', alignItems: 'center' },
   btnTextReject: { color: '#ef4444', fontWeight: '700', fontSize: 14 },
   btnTextAccept: { color: '#fff', fontWeight: '700', fontSize: 14 }
 });

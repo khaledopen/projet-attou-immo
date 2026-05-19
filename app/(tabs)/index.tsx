@@ -12,14 +12,25 @@ const OwnerDashboard = () => {
   const [recentVisits, setRecentVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [user, setUser] = useState(null);
 
   const fetchData = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      const userDataStr = await AsyncStorage.getItem('userData');
       const headers = { Authorization: `Bearer ${token}` };
 
+      let proprietaireId = undefined;
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        setUser(userData);
+        proprietaireId = userData.id;
+      }
+
       // Fetch properties to count them
-      const propsRes = await axios.get(`${BASE_URL}/properties`, { params: { ownerId: 'my' } }); // Logic in controller needs to support owner filtering
+      const propsRes = await axios.get(`${BASE_URL}/properties`, { 
+        params: proprietaireId ? { proprietaireId } : {} 
+      });
       
       // Fetch visits
       const visitsRes = await axios.get(`${BASE_URL}/visits/owner`, { headers });
@@ -49,7 +60,7 @@ const OwnerDashboard = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#1e3a8a" />
+        <ActivityIndicator size="large" color="#0ea5e9" />
       </View>
     );
   }
@@ -62,8 +73,8 @@ const OwnerDashboard = () => {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.welcomeText}>Tableau de bord</Text>
-          <Text style={styles.brandText}>AttouNest Pro 💼</Text>
+          <Text style={styles.welcomeText}>👋 Bienvenue,</Text>
+          <Text style={styles.brandText}>{user ? `${user.prenom} ${user.nom}` : 'Propriétaire'}</Text>
         </View>
         <TouchableOpacity 
           style={styles.addButton}
@@ -78,9 +89,9 @@ const OwnerDashboard = () => {
           <Text style={styles.statValue}>{stats.properties}</Text>
           <Text style={styles.statLabel}>Mes Biens</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: '#1e3a8a' }]}>
+        <View style={[styles.statCard, { backgroundColor: '#0ea5e9' }]}>
           <Text style={[styles.statValue, { color: '#fff' }]}>{stats.visits}</Text>
-          <Text style={[styles.statLabel, { color: '#bfdbfe' }]}>Visites reçues</Text>
+          <Text style={[styles.statLabel, { color: '#e0f2fe' }]}>Visites reçues</Text>
         </View>
       </View>
 
@@ -100,10 +111,10 @@ const OwnerDashboard = () => {
         recentVisits.map((visit) => (
           <View key={visit.id} style={styles.visitCard}>
             <View style={styles.visitInfo}>
-              <Text style={styles.tenantName}>{visit.tenant.prenom} {visit.tenant.nom}</Text>
-              <Text style={styles.propertyName}>{visit.annonce.titre}</Text>
+              <Text style={styles.tenantName}>{visit.locataire?.prenom || 'Locataire'} {visit.locataire?.nom || ''}</Text>
+              <Text style={styles.propertyName}>{visit.annonce?.titre || 'Annonce'}</Text>
               <Text style={styles.visitDate}>
-                <Ionicons name="time-outline" size={12} /> {new Date(visit.dateProposee).toLocaleDateString('fr-FR')}
+                <Ionicons name="time-outline" size={12} /> {visit.dateProposee ? new Date(visit.dateProposee).toLocaleDateString('fr-FR') : 'Date non définie'}
               </Text>
             </View>
             <View style={[styles.statusBadge, visit.statut === 'ACCEPTEE' ? styles.statusAccepted : styles.statusPending]}>
@@ -119,7 +130,7 @@ const OwnerDashboard = () => {
         style={styles.quickAction}
         onPress={() => router.push('/add-property')}
       >
-        <Ionicons name="home-outline" size={24} color="#1e3a8a" />
+        <Ionicons name="home-outline" size={24} color="#0ea5e9" />
         <Text style={styles.quickActionText}>Publier une nouvelle annonce</Text>
         <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
       </TouchableOpacity>
@@ -161,11 +172,11 @@ const styles = StyleSheet.create({
   addButton: {
     width: 50,
     height: 50,
-    backgroundColor: '#1e3a8a',
+    backgroundColor: '#0ea5e9',
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1e3a8a',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -187,7 +198,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#1e3a8a',
+    color: '#0ea5e9',
   },
   statLabel: {
     fontSize: 12,
@@ -207,7 +218,7 @@ const styles = StyleSheet.create({
     color: '#1e293b',
   },
   seeMore: {
-    color: '#1e3a8a',
+    color: '#0ea5e9',
     fontWeight: '600',
     fontSize: 14,
   },

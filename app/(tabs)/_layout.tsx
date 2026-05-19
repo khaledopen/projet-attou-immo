@@ -6,7 +6,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#1e3a8a',
+        tabBarActiveTintColor: '#0ea5e9',
         tabBarInactiveTintColor: '#94a3b8',
         headerShown: false,
         tabBarStyle: {
@@ -22,9 +22,15 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Accueil',
           tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" size={size} color={color} />,
         }}
       />

@@ -5,6 +5,9 @@ import { Alert } from 'react-native';
 import io from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SOCKET_URL } from '../api/config';
+import axios from 'axios';
+
+axios.defaults.headers.common['bypass-tunnel-reminder'] = 'true';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -41,6 +44,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="add-property" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="edit-property" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>
   );

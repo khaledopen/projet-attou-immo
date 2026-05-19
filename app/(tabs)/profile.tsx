@@ -39,7 +39,7 @@ const ProfileScreen = () => {
     ]);
   };
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#1e3a8a" />;
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#0ea5e9" />;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -56,13 +56,13 @@ const ProfileScreen = () => {
 
       <View style={styles.menu}>
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="business-outline" size={22} color="#1e3a8a" />
+          <Ionicons name="business-outline" size={22} color="#0ea5e9" />
           <Text style={styles.menuText}>Informations agence</Text>
           <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="stats-chart-outline" size={22} color="#1e3a8a" />
+          <Ionicons name="stats-chart-outline" size={22} color="#0ea5e9" />
           <Text style={styles.menuText}>Statistiques de location</Text>
           <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
         </TouchableOpacity>
@@ -81,11 +81,11 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 25, paddingTop: 60 },
   title: { fontSize: 28, fontWeight: '800', color: '#0f172a', marginBottom: 30 },
   profileHeader: { alignItems: 'center', marginBottom: 40 },
-  avatar: { width: 100, height: 100, borderRadius: 30, backgroundColor: '#1e3a8a', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  avatar: { width: 100, height: 100, borderRadius: 30, backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
   avatarText: { color: '#fff', fontSize: 36, fontWeight: 'bold' },
   userName: { fontSize: 22, fontWeight: '800', color: '#1e293b' },
   userEmail: { fontSize: 14, color: '#64748b', marginTop: 5 },
-  raisonSociale: { fontSize: 12, fontWeight: '700', color: '#1e3a8a', backgroundColor: '#eff6ff', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginTop: 10 },
+  raisonSociale: { fontSize: 12, fontWeight: '700', color: '#0ea5e9', backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginTop: 10 },
   menu: { backgroundColor: '#fff', borderRadius: 25, padding: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15, elevation: 2 },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
   menuText: { flex: 1, marginLeft: 15, fontSize: 16, fontWeight: '600', color: '#1e293b' }

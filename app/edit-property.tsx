@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,10 +9,14 @@ import { BASE_URL } from '../api/config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
-const AddProperty = () => {
+const EditProperty = () => {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [images, setImages] = useState<string[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
   const [form, setForm] = useState({
     titre: '',
     description: '',
@@ -26,6 +30,46 @@ const AddProperty = () => {
     ville: 'Abidjan',
     codePostal: '',
   });
+
+  useEffect(() => {
+    const fetchPropertyDetails = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        const res = await axios.get(`${BASE_URL}/properties/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const data = res.data;
+        setForm({
+          titre: data.titre || '',
+          description: data.description || '',
+          prix: String(data.prix || ''),
+          typeBien: data.typeBien || 'APPARTEMENT',
+          surface: String(data.bien?.surface || ''),
+          nombrePieces: String(data.nombrePieces || ''),
+          nombreChambres: String(data.bien?.nombreChambres || ''),
+          etage: data.bien?.etage !== null ? String(data.bien.etage) : '',
+          rue: data.bien?.adresse?.rue || '',
+          ville: data.bien?.adresse?.ville || 'Abidjan',
+          codePostal: data.bien?.adresse?.codePostal || '',
+        });
+
+        if (data.photos) {
+          const urls = data.photos.map((p: any) => p.url);
+          setExistingPhotos(urls);
+        }
+      } catch (error) {
+        console.error('Erreur details bien:', error);
+        Alert.alert('Erreur', 'Impossible de charger les détails du bien.');
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    if (id) {
+      fetchPropertyDetails();
+    }
+  }, [id]);
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -59,8 +103,12 @@ const AddProperty = () => {
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeNewImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index: number) => {
+    setExistingPhotos(existingPhotos.filter((_, i) => i !== index));
   };
 
   const uploadImages = async (imageUris: string[], token: string) => {
@@ -92,10 +140,6 @@ const AddProperty = () => {
       Alert.alert('Champs requis', 'Veuillez remplir les informations essentielles.');
       return;
     }
-    if (images.length === 0) {
-      Alert.alert('Champs requis', 'Veuillez ajouter au moins une photo pour votre annonce.');
-      return;
-    }
 
     try {
       setLoading(true);
@@ -105,6 +149,8 @@ const AddProperty = () => {
       if (images.length > 0) {
         uploadedUrls = await uploadImages(images, token!);
       }
+
+      const allPhotos = [...existingPhotos, ...uploadedUrls];
       
       const payload = {
         ...form,
@@ -114,20 +160,20 @@ const AddProperty = () => {
         nombreChambres: parseInt(form.nombreChambres) || 0,
         etage: form.etage ? parseInt(form.etage) : null,
         equipements: ["Wifi", "Climatisation"],
-        photos: uploadedUrls,
+        photos: allPhotos,
       };
 
-      await axios.post(`${BASE_URL}/properties`, payload, {
+      await axios.put(`${BASE_URL}/properties/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      Alert.alert('Succès', 'Votre annonce a été publiée avec succès !', [
-        { text: 'Super', onPress: () => router.replace('/(tabs)') }
+      Alert.alert('Succès', 'Votre annonce a été modifiée avec succès !', [
+        { text: 'Super', onPress: () => router.replace('/(tabs)/properties') }
       ]);
-    } catch (error) {
-      console.error('Erreur publication:', error);
-      const msg = error.response?.data?.message || error.message || 'Erreur lors de la publication';
-      Alert.alert('Erreur', `Impossible de publier l'annonce. ${msg}`);
+    } catch (error: any) {
+      console.error('Erreur modification:', error);
+      const msg = error.response?.data?.message || error.message || 'Erreur lors de la modification';
+      Alert.alert('Erreur', `Impossible de modifier l'annonce. ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -135,14 +181,23 @@ const AddProperty = () => {
 
   const propertyTypes = ['APPARTEMENT', 'MAISON', 'STUDIO', 'VILLA', 'CHAMBRE'];
 
+  if (fetching) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#0284c7" />
+        <Text style={styles.loadingText}>Chargement des détails...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.appBar}>
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#0f172a" />
+          <Ionicons name="arrow-back" size={24} color="#0f172a" />
         </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Nouvelle Annonce</Text>
+        <Text style={styles.appBarTitle}>Modifier l'Annonce</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -154,28 +209,51 @@ const AddProperty = () => {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Photos du bien</Text>
+            
+            {/* Existing Photos */}
+            {existingPhotos.length > 0 && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={styles.subLabel}>Photos actuelles :</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewScroll}>
+                  {existingPhotos.map((url, index) => (
+                    <View key={index} style={styles.previewImageContainer}>
+                      <Image source={{ uri: url }} style={styles.previewImage} />
+                      <TouchableOpacity style={styles.removeImageButton} onPress={() => removeExistingImage(index)}>
+                        <Ionicons name="close-circle" size={22} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Selector Row */}
             <View style={styles.imageSelectorRow}>
               <TouchableOpacity style={styles.imageSelectorButton} onPress={pickImage}>
                 <Ionicons name="images-outline" size={20} color="#0284c7" />
-                <Text style={styles.imageSelectorText}>Galerie</Text>
+                <Text style={styles.imageSelectorText}>Ajouter Galerie</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.imageSelectorButton} onPress={takePhoto}>
                 <Ionicons name="camera-outline" size={20} color="#0284c7" />
-                <Text style={styles.imageSelectorText}>Prendre</Text>
+                <Text style={styles.imageSelectorText}>Prendre Photo</Text>
               </TouchableOpacity>
             </View>
 
+            {/* New Photos Preview */}
             {images.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewScroll}>
-                {images.map((uri, index) => (
-                  <View key={index} style={styles.previewImageContainer}>
-                    <Image source={{ uri }} style={styles.previewImage} />
-                    <TouchableOpacity style={styles.removeImageButton} onPress={() => removeImage(index)}>
-                      <Ionicons name="close-circle" size={22} color="#ef4444" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
+              <View style={{ marginTop: 8 }}>
+                <Text style={styles.subLabel}>Nouvelles photos :</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewScroll}>
+                  {images.map((uri, index) => (
+                    <View key={index} style={styles.previewImageContainer}>
+                      <Image source={{ uri }} style={styles.previewImage} />
+                      <TouchableOpacity style={styles.removeImageButton} onPress={() => removeNewImage(index)}>
+                        <Ionicons name="close-circle" size={22} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
             )}
           </View>
 
@@ -292,7 +370,7 @@ const AddProperty = () => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>Publier l'annonce</Text>
+            <Text style={styles.submitText}>Enregistrer les modifications</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -302,12 +380,15 @@ const AddProperty = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#e0f2fe' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e0f2fe' },
+  loadingText: { marginTop: 12, color: '#0284c7', fontWeight: '600' },
   appBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   closeButton: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9' },
   appBarTitle: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
   scrollContent: { padding: 20 },
   card: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: '#0ea5e9', shadowOpacity: 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: '#0284c7', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  subLabel: { fontSize: 12, color: '#64748b', fontWeight: '700', marginBottom: 6 },
   input: { backgroundColor: '#f8fafc', padding: 16, borderRadius: 16, borderWidth: 1.5, borderColor: '#e2e8f0', marginBottom: 15, fontSize: 16, color: '#0f172a' },
   inputMultiline: { height: 100, textAlignVertical: 'top' },
   row: { flexDirection: 'row', gap: 12 },
@@ -318,7 +399,7 @@ const styles = StyleSheet.create({
   typeButtonTextActive: { color: '#fff' },
   imageSelectorRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   imageSelectorButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, backgroundColor: '#f0f9ff', borderWidth: 1.5, borderColor: '#bae6fd' },
-  imageSelectorText: { fontSize: 14, fontWeight: '700', color: '#0284c7' },
+  imageSelectorText: { fontSize: 13, fontWeight: '700', color: '#0284c7' },
   imagePreviewScroll: { flexDirection: 'row', marginTop: 10 },
   previewImageContainer: { position: 'relative', marginRight: 12 },
   previewImage: { width: 90, height: 90, borderRadius: 16 },
@@ -328,4 +409,4 @@ const styles = StyleSheet.create({
   submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });
 
-export default AddProperty;
+export default EditProperty;
