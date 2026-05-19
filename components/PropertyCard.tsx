@@ -15,7 +15,7 @@ export default function PropertyCard({ property, onPress }) {
           <Text style={styles.price}>{property.price.toLocaleString()} FCFA</Text>
         </View>
         <View style={styles.locationContainer}>
-          <Ionicons name="location-outline" size={14} color="#065f46" />
+          <Ionicons name="location-outline" size={14} color="#0369a1" />
           <Text style={styles.location}>{property.city}, {property.address}</Text>
         </View>
         <View style={styles.footer}>
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#065f46',
+    color: '#0369a1',
   },
   locationContainer: {
     flexDirection: 'row',
@@ -87,18 +87,18 @@ const styles = StyleSheet.create({
     borderTopColor: '#f1f5f9',
   },
   tag: {
-    backgroundColor: '#ecfdf5',
+    backgroundColor: '#f0f9ff',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   tagText: {
-    color: '#059669',
+    color: '#0ea5e9',
     fontSize: 10,
     fontWeight: '600',
   },
   btn: {
-    backgroundColor: '#065f46',
+    backgroundColor: '#0369a1',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,

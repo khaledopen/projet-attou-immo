@@ -12,6 +12,36 @@ const PropertyDetails = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+
+  const checkIfFavorite = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('favorites');
+      const favList = stored ? JSON.parse(stored) : [];
+      setIsFavorite(favList.some(item => item.id === id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!property) return;
+    try {
+      const stored = await AsyncStorage.getItem('favorites');
+      let favList = stored ? JSON.parse(stored) : [];
+      if (isFavorite) {
+        favList = favList.filter(item => item.id !== id);
+      } else {
+        favList.push(property);
+      }
+      await AsyncStorage.setItem('favorites', JSON.stringify(favList));
+      setIsFavorite(!isFavorite);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
 
   const fetchDetails = async () => {
     try {
@@ -27,6 +57,7 @@ const PropertyDetails = () => {
 
   useEffect(() => {
     fetchDetails();
+    checkIfFavorite();
   }, [id]);
 
   const handleRequestVisit = async () => {
@@ -61,7 +92,7 @@ const PropertyDetails = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#0ea5e9" />
       </View>
     );
   }
@@ -72,12 +103,33 @@ const PropertyDetails = () => {
     <View style={styles.container}>
       <ScrollView>
         <Image 
-          source={{ uri: property.photos?.[0]?.url || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80' }} 
+          source={{ uri: property.photos?.[activePhotoIndex]?.url || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80' }} 
           style={styles.image} 
         />
         
+        {property.photos && property.photos.length > 0 && (
+          <View style={styles.thumbnailContainer}>
+            {property.photos.slice(0, 3).map((photo, index) => (
+              <TouchableOpacity 
+                key={index} 
+                onPress={() => setActivePhotoIndex(index)}
+                style={[
+                  styles.thumbnailWrapper,
+                  activePhotoIndex === index && styles.activeThumbnailWrapper
+                ]}
+              >
+                <Image source={{ uri: photo.url }} style={styles.thumbnailImage} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.favoriteButton} onPress={toggleFavorite}>
+          <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={24} color={isFavorite ? "#ef4444" : "#000"} />
         </TouchableOpacity>
 
         <View style={styles.content}>
@@ -90,7 +142,7 @@ const PropertyDetails = () => {
 
           <Text style={styles.title}>{property.titre}</Text>
           <View style={styles.locationContainer}>
-            <Ionicons name="location" size={16} color="#059669" />
+            <Ionicons name="location" size={16} color="#0ea5e9" />
             <Text style={styles.location}>{property.bien.adresse.ville}, {property.bien.adresse.rue}</Text>
           </View>
 
@@ -132,7 +184,7 @@ const PropertyDetails = () => {
               </View>
             </View>
             <TouchableOpacity style={styles.contactIcon}>
-              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#059669" />
+              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#0ea5e9" />
             </TouchableOpacity>
           </View>
         </View>
@@ -173,11 +225,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
   },
+  favoriteButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  thumbnailContainer: {
+    position: 'absolute',
+    top: 280,
+    right: 20,
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    padding: 6,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  thumbnailWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  activeThumbnailWrapper: {
+    borderColor: '#0ea5e9',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
   content: { padding: 25, borderTopLeftRadius: 35, borderTopRightRadius: 35, backgroundColor: '#fff', marginTop: -30 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  typeBadge: { backgroundColor: '#ecfdf5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  typeText: { color: '#059669', fontSize: 12, fontWeight: 'bold' },
-  price: { fontSize: 18, fontWeight: '900', color: '#059669' },
+  typeBadge: { backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  typeText: { color: '#0ea5e9', fontSize: 12, fontWeight: 'bold' },
+  price: { fontSize: 18, fontWeight: '900', color: '#0ea5e9' },
   title: { fontSize: 24, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
   locationContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   location: { color: '#64748b', marginLeft: 5, fontSize: 14 },
@@ -191,13 +283,13 @@ const styles = StyleSheet.create({
   equipmentText: { color: '#475569', fontSize: 13, fontWeight: '600' },
   ownerCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 15, backgroundColor: '#f8fafc', borderRadius: 20, marginBottom: 40 },
   ownerInfo: { flexDirection: 'row', alignItems: 'center' },
-  ownerAvatar: { width: 50, height: 50, borderRadius: 15, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  ownerAvatar: { width: 50, height: 50, borderRadius: 15, backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   ownerInitial: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   ownerName: { fontSize: 16, fontWeight: '700', color: '#1e293b' },
   ownerRole: { fontSize: 12, color: '#94a3b8' },
   contactIcon: { width: 45, height: 45, backgroundColor: '#fff', borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f1f5f9' },
   footer: { padding: 25, borderTopWidth: 1, borderColor: '#f1f5f9' },
-  requestButton: { backgroundColor: '#059669', padding: 20, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#059669', shadowOpacity: 0.3, shadowRadius: 15, elevation: 5 },
+  requestButton: { backgroundColor: '#0ea5e9', padding: 20, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#0ea5e9', shadowOpacity: 0.3, shadowRadius: 15, elevation: 5 },
   requestButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });
 

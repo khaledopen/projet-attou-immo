@@ -5,6 +5,9 @@ import { Alert } from 'react-native';
 import io from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SOCKET_URL } from '../api/config';
+import axios from 'axios';
+
+axios.defaults.headers.common['bypass-tunnel-reminder'] = 'true';
 
 export default function RootLayout() {
   useEffect(() => {

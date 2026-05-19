@@ -5,12 +5,30 @@ import axios from 'axios';
 import { BASE_URL } from '../../api/config';
 import PropertyCard from '../../components/PropertyCard';
 import { useRouter } from 'expo-router';
+import { useSocket } from '../../hooks/useSocket';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ExplorerScreen = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const socket = useSocket();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadNotifications = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
+      const response = await axios.get(`${BASE_URL}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const unreads = response.data.filter((n: any) => !n.lu).length;
+      setUnreadCount(unreads);
+    } catch (error) {
+      console.error('Erreur count notifications unread:', error);
+    }
+  };
 
   const fetchProperties = async () => {
     try {
@@ -26,17 +44,51 @@ const ExplorerScreen = () => {
 
   useEffect(() => {
     fetchProperties();
+    fetchUnreadNotifications();
   }, []);
+
+  // Poll or refresh unreads when screen focus changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUnreadNotifications();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (socket) {
+      const handleRealtimeUpdate = () => {
+        console.log('Realtime update received via socket, refreshing listings...');
+        fetchProperties();
+      };
+      
+      const handleNotificationUpdate = () => {
+        console.log('New notification socket event, refreshing unread count...');
+        fetchUnreadNotifications();
+      };
+      
+      socket.on('property_created', handleRealtimeUpdate);
+      socket.on('property_updated', handleRealtimeUpdate);
+      socket.on('notification_created', handleNotificationUpdate);
+      
+      return () => {
+        socket.off('property_created', handleRealtimeUpdate);
+        socket.off('property_updated', handleRealtimeUpdate);
+        socket.off('notification_created', handleNotificationUpdate);
+      };
+    }
+  }, [socket]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchProperties();
+    fetchUnreadNotifications();
   };
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#0ea5e9" />
       </View>
     );
   }
@@ -50,11 +102,11 @@ const ExplorerScreen = () => {
       <View style={styles.header}>
         <View>
           <Text style={styles.welcomeText}>Trouvez votre</Text>
-          <Text style={styles.brandText}>AttouHome 🏠</Text>
+          <Text style={styles.brandText}>AttouHome</Text>
         </View>
-        <TouchableOpacity style={styles.notificationBadge}>
+        <TouchableOpacity style={styles.notificationBadge} onPress={() => router.push('/modal')}>
           <Ionicons name="notifications-outline" size={24} color="#1e293b" />
-          <View style={styles.dot} />
+          {unreadCount > 0 && <View style={styles.dot} />}
         </TouchableOpacity>
       </View>
 

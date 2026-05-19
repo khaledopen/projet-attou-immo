@@ -7,7 +7,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#059669',
+        tabBarActiveTintColor: '#0ea5e9',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           backgroundColor: '#fff',
@@ -23,6 +23,12 @@ export default function TabLayout() {
         }
       }}
     >
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
+        }}
+      />
       <Tabs.Screen
         name="index"
         options={{
