@@ -4,7 +4,8 @@ const {
   getProperties, 
   getPropertyById, 
   updateProperty,
-  deleteProperty 
+  deleteProperty,
+  reportProperty
 } = require('../controllers/propertyController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
@@ -162,5 +163,7 @@ router.route('/:id')
   .get(getPropertyById)
   .put(protect, authorize('PROPRIETAIRE', 'ADMIN'), updateProperty)
   .delete(protect, authorize('PROPRIETAIRE', 'ADMIN'), deleteProperty);
+
+router.put('/:id/report', protect, reportProperty);
 
 module.exports = router;

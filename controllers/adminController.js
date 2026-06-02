@@ -114,7 +114,7 @@ exports.getProperties = async (req, res) => {
           include: { adresse: true }
         },
         proprietaire: {
-          select: { nom: true, prenom: true, email: true, telephone: true }
+          select: { nom: true, prenom: true, email: true, telephone: true, typeBailleur: true, raisonSociale: true }
         },
         photos: true
       },
@@ -131,7 +131,7 @@ exports.getPendingProperties = async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
     const annonces = await prisma.annonce.findMany({
-      where: { statut: 'EN_ATTENTE' },
+      where: { statut: 'SUSPENDUE' },
       include: {
         bien: {
           include: { adresse: true }
@@ -199,19 +199,56 @@ exports.approveProperty = async (req, res) => {
 
 exports.rejectProperty = async (req, res) => {
   try {
-    const { id } = req.params;
-    const updated = await prisma.annonce.update({
-      where: { id },
-      data: { statut: 'REJETEE' }
+    const annonceId = req.params.id;
+    
+    const annonce = await prisma.annonce.findUnique({
+      where: { id: annonceId },
+      include: { bien: true }
     });
 
-    if (req.io) {
-      req.io.emit('property_updated', updated);
+    if (!annonce) {
+      return res.status(404).json({ message: 'Annonce non trouvée' });
     }
 
-    res.json({ message: 'Annonce rejetée avec succès', annonce: updated });
+    // Delete photos
+    await prisma.photo.deleteMany({
+      where: { annonceId }
+    });
+
+    // Delete demands of visits
+    await prisma.demandeVisite.deleteMany({
+      where: { annonceId }
+    });
+
+    // Delete the annonce itself
+    await prisma.annonce.delete({
+      where: { id: annonceId }
+    });
+
+    // Delete the associated bien & address
+    if (annonce.bienId) {
+      const bien = await prisma.bien.findUnique({
+        where: { id: annonce.bienId }
+      });
+      
+      await prisma.bien.delete({
+        where: { id: annonce.bienId }
+      });
+
+      if (bien && bien.adresseId) {
+        await prisma.adresse.delete({
+          where: { id: bien.adresseId }
+        });
+      }
+    }
+
+    if (req.io) {
+      req.io.emit('property_deleted', annonceId);
+    }
+
+    res.json({ message: 'Annonce supprimée avec succès' });
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors du rejet de l\'annonce', error: error.message });
+    res.status(500).json({ message: 'Erreur lors de la suppression de l\'annonce', error: error.message });
   }
 };
 
@@ -233,3 +270,34 @@ exports.getVisits = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des visites', error: error.message });
   }
 };
+
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { statut } = req.body;
+
+    if (!['ACTIF', 'SUSPENDU', 'DESACTIVE'].includes(statut)) {
+      return res.status(400).json({ message: 'Statut invalide' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { statut },
+      select: {
+        id: true,
+        nom: true,
+        prenom: true,
+        email: true,
+        telephone: true,
+        role: true,
+        statut: true,
+        dateInscription: true
+      }
+    });
+
+    res.json({ message: 'Statut de l\'utilisateur mis à jour avec succès', user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour du statut', error: error.message });
+  }
+};
+

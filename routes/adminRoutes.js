@@ -6,7 +6,8 @@ const {
   getPendingProperties,
   approveProperty,
   rejectProperty,
-  getVisits
+  getVisits,
+  updateUserStatus
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.get('/moderation/pending', getPendingProperties);
 router.get('/visits', getVisits);
 router.post('/properties/:id/approve', approveProperty);
 router.post('/properties/:id/reject', rejectProperty);
+router.patch('/users/:id/status', updateUserStatus);
 
 module.exports = router;

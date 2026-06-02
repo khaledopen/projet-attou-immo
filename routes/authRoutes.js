@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login } = require('../controllers/authController');
+const { register, login, googleCallbackPage } = require('../controllers/authController');
 const router = express.Router();
 
 /**
@@ -76,5 +76,6 @@ router.post('/register', register);
  *         description: Identifiants invalides
  */
 router.post('/login', login);
+router.get('/google/callback', googleCallbackPage);
 
 module.exports = router;

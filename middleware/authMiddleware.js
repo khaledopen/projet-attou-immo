@@ -11,11 +11,15 @@ exports.protect = async (req, res, next) => {
 
       req.user = await prisma.user.findUnique({
         where: { id: decoded.id },
-        select: { id: true, email: true, role: true, prenom: true, nom: true }
+        select: { id: true, email: true, role: true, prenom: true, nom: true, statut: true }
       });
 
       if (!req.user) {
         return res.status(401).json({ message: 'User not found' });
+      }
+
+      if (req.user.statut === 'SUSPENDU') {
+        return res.status(403).json({ message: 'Votre compte a été suspendu pour non-respect de la politique de confidentialité.' });
       }
 
       next();

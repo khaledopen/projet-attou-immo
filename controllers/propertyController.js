@@ -76,7 +76,7 @@ exports.createProperty = async (req, res) => {
         surface: parseFloat(surface),
         nombrePieces: parseInt(nombrePieces) || 0,
         typeBien,
-        statut: 'EN_ATTENTE',
+        statut: 'PUBLIEE',
         proprietaireId,
         bienId: bien.id,
         photos: {
@@ -330,5 +330,24 @@ exports.deleteProperty = async (req, res) => {
     res.json({ message: 'Annonce supprimée avec succès' });
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la suppression de l\'annonce', error: error.message });
+  }
+};
+
+exports.reportProperty = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description } = req.body; // New description field
+    const updated = await prisma.annonce.update({
+      where: { id },
+      data: { statut: 'SUSPENDUE', raisonSignalement: description }
+    });
+
+    if (req.io) {
+      req.io.emit('property_deleted', id); // Emit property_deleted so it gets removed from other tenants feeds immediately
+    }
+
+    res.json({ message: 'Annonce signalée avec succès' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors du signalement', error: error.message });
   }
 };

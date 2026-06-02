@@ -12,6 +12,21 @@ exports.requestVisit = async (req, res) => {
 
     if (!annonce) return res.status(404).json({ message: 'Annonce non trouvée' });
 
+    // Vérifier si une demande de visite existe déjà pour ce locataire et cette annonce
+    const existingDemande = await prisma.demandeVisite.findFirst({
+      where: {
+        annonceId,
+        locataireId,
+        statut: { in: ['EN_ATTENTE', 'ACCEPTEE'] }
+      }
+    });
+
+    if (existingDemande) {
+      return res.status(409).json({ 
+        message: 'Vous avez déjà une demande de visite en cours pour ce bien.' 
+      });
+    }
+
     const demandeVisite = await prisma.demandeVisite.create({
       data: {
         annonceId,
@@ -119,6 +134,25 @@ exports.updateVisitStatus = async (req, res) => {
         annonce: { select: { titre: true } }
       }
     });
+
+    if (statut === 'ACCEPTEE') {
+      const existingConv = await prisma.conversation.findFirst({
+        where: {
+          locataireId: visite.locataireId,
+          proprietaireId: visite.annonce.proprietaireId,
+          annonceId: visite.annonce.id
+        }
+      });
+      if (!existingConv) {
+        await prisma.conversation.create({
+          data: {
+            locataireId: visite.locataireId,
+            proprietaireId: visite.annonce.proprietaireId,
+            annonceId: visite.annonce.id
+          }
+        });
+      }
+    }
 
     // Notification au locataire
     if (req.io) {

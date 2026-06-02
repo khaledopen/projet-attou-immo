@@ -77,6 +77,9 @@ model User {
   annonces         Annonce[]     @relation("ProprietaireAnnonces")
   demandesVisites  DemandeVisite[]
   notifications    Notification[]
+  conversationsLocataire     Conversation[] @relation("LocataireConversations")
+  conversationsProprietaire  Conversation[] @relation("ProprietaireConversations")
+  messagesEnvoyes            Message[]      @relation("ExpediteurMessages")
 
   @@map("utilisateurs")
 }
@@ -102,6 +105,9 @@ model Annonce {
   
   photos           Photo[]
   demandesVisites  DemandeVisite[]
+  conversations    Conversation[]
+
+  raisonSignalement String?
 
   @@map("annonces")
 }
@@ -178,4 +184,35 @@ model Notification {
   user             User          @relation(fields: [userId], references: [id])
 
   @@map("notifications")
+}
+
+model Conversation {
+  id            String    @id @default(uuid())
+  locataireId   String
+  proprietaireId String
+  annonceId     String?
+  dateCreation  DateTime  @default(now())
+  dateMiseAJour DateTime  @updatedAt
+
+  locataire     User      @relation("LocataireConversations", fields: [locataireId], references: [id])
+  proprietaire  User      @relation("ProprietaireConversations", fields: [proprietaireId], references: [id])
+  annonce       Annonce?  @relation(fields: [annonceId], references: [id])
+  messages      Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  contenu        String
+  lu             Boolean      @default(false)
+  dateEnvoi      DateTime     @default(now())
+  
+  expediteurId   String
+  expediteur     User         @relation("ExpediteurMessages", fields: [expediteurId], references: [id])
+  
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
 }
