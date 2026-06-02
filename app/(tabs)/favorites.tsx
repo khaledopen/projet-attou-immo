@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import PropertyCard from '../../components/PropertyCard';
+import api from '../../api/axiosInstance';
+import { BASE_URL } from '../../api/config';
 
 const FavoritesScreen = () => {
   const [favorites, setFavorites] = useState([]);
@@ -15,13 +17,26 @@ const FavoritesScreen = () => {
   const loadFavorites = async () => {
     try {
       const stored = await AsyncStorage.getItem('favorites');
+      let storedFavs = stored ? JSON.parse(stored) : [];
+      
+      // Fetch fresh properties from backend to ensure photos/details are up-to-date and never disappear!
+      const response = await api.get('/properties');
+      const freshProperties = response.data;
+      
+      // Match stored IDs with fresh properties
+      const storedIds = storedFavs.map((item: any) => typeof item === 'string' ? item : item.id);
+      const activeFavs = freshProperties.filter((p: any) => storedIds.includes(p.id));
+      
+      setFavorites(activeFavs);
+    } catch (error: any) {
+      console.log('Erreur chargement favoris:', error.message || error);
+      // Fallback offline
+      const stored = await AsyncStorage.getItem('favorites');
       if (stored) {
         setFavorites(JSON.parse(stored));
       } else {
         setFavorites([]);
       }
-    } catch (error) {
-      console.error('Erreur chargement favoris:', error);
     } finally {
       setRefreshing(false);
     }
@@ -38,6 +53,18 @@ const FavoritesScreen = () => {
     loadFavorites();
   };
 
+  const toggleFavorite = async (propertyItem: any) => {
+    try {
+      const stored = await AsyncStorage.getItem('favorites');
+      let favList = stored ? JSON.parse(stored) : [];
+      favList = favList.filter((item: any) => item.id !== propertyItem.id);
+      await AsyncStorage.setItem('favorites', JSON.stringify(favList));
+      setFavorites(favList);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const renderItem = ({ item }) => (
     <PropertyCard
       property={{
@@ -45,9 +72,16 @@ const FavoritesScreen = () => {
         title: item.titre,
         price: item.prix,
         address: `${item.bien?.adresse?.ville || ''}, ${item.bien?.adresse?.rue || ''}`,
+        city: item.bien?.adresse?.ville || '',
+        status: item.statut || 'AVAILABLE',
         type: item.typeBien,
-        imageUrl: item.photos?.[0]?.url || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80'
+        imageUrl: item.photos?.[0]?.url || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80',
+        photosCount: item.photos?.length || 0,
+        chambres: item.bien?.nombreChambres || 0,
+        surface: item.surface || 0,
       }}
+      isFavorite={true}
+      onToggleFavorite={() => toggleFavorite(item)}
       onPress={() => router.push(`/property/${item.id}`)}
     />
   );
@@ -55,7 +89,7 @@ const FavoritesScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mes Favoris ❤️</Text>
+        <Text style={styles.title}>Mes Favoris</Text>
       </View>
       
       <FlatList

@@ -8,11 +8,13 @@ export const useSocket = () => {
 
   useEffect(() => {
     const initSocket = async () => {
-      const userStr = await AsyncStorage.getItem('user');
+      const userStr = await AsyncStorage.getItem('userData');
       if (!userStr) return;
 
       const user = JSON.parse(userStr);
-      const newSocket = io(SOCKET_URL);
+      const newSocket = io(SOCKET_URL, {
+        transports: ['websocket']
+      });
 
       newSocket.on('connect', () => {
         console.log('Socket connected');

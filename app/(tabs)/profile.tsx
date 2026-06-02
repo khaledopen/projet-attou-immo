@@ -1,29 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        setUser(JSON.parse(userData));
+        setIsLoggedIn(true);
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+      }
+    } catch (error) {
+      console.error('Erreur chargement profil:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          setUser(JSON.parse(userData));
-        }
-      } catch (error) {
-        console.error('Erreur chargement profil:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadUserData();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserData();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleLogout = async () => {
     Alert.alert('Déconnexion', 'Souhaitez-vous vous déconnecter ?', [
@@ -33,7 +44,7 @@ const ProfileScreen = () => {
         style: 'destructive',
         onPress: async () => {
           await AsyncStorage.multiRemove(['userToken', 'userData']);
-          router.replace('/login');
+          router.replace('/(tabs)');
         }
       }
     ]);
@@ -41,9 +52,34 @@ const ProfileScreen = () => {
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
+  if (!isLoggedIn) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.title}>Mon Profil</Text>
+        
+        <View style={styles.profileHeader}>
+          <View style={[styles.avatar, { backgroundColor: '#f1f5f9' }]}>
+            <Ionicons name="person-outline" size={40} color="#94a3b8" />
+          </View>
+          <Text style={styles.userName}>Bienvenue sur AttouHome</Text>
+          <Text style={styles.userEmail}>Connectez-vous pour voir et gérer votre profil complet.</Text>
+        </View>
+
+        <View style={styles.authBox}>
+          <TouchableOpacity style={styles.unauthBtn} onPress={() => router.push('/login')}>
+            <Text style={styles.unauthBtnText}>Se connecter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.unauthSecondaryBtn} onPress={() => router.push('/register')}>
+            <Text style={styles.unauthSecondaryBtnText}>S'inscrire</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>Mon Profil 👤</Text>
+      <Text style={styles.title}>Mon Profil</Text>
       
       <View style={styles.profileHeader}>
         <View style={styles.avatar}>
@@ -91,7 +127,12 @@ const styles = StyleSheet.create({
   roleText: { color: '#0ea5e9', fontSize: 10, fontWeight: '800' },
   menu: { backgroundColor: '#fff', borderRadius: 25, padding: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15, elevation: 2 },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
-  menuText: { flex: 1, marginLeft: 15, fontSize: 16, fontWeight: '600', color: '#1e293b' }
+  menuText: { flex: 1, marginLeft: 15, fontSize: 16, fontWeight: '600', color: '#1e293b' },
+  authBox: { backgroundColor: '#fff', borderRadius: 28, padding: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15, elevation: 2, alignItems: 'center' },
+  unauthBtn: { backgroundColor: '#0ea5e9', width: '100%', paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginBottom: 12, shadowColor: '#0ea5e9', shadowOpacity: 0.2, shadowRadius: 8, elevation: 2 },
+  unauthBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  unauthSecondaryBtn: { backgroundColor: '#fff', width: '100%', paddingVertical: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#e2e8f0' },
+  unauthSecondaryBtnText: { color: '#0ea5e9', fontSize: 16, fontWeight: '700' }
 });
 
 export default ProfileScreen;
