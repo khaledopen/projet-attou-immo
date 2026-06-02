@@ -2,6 +2,39 @@ import React from 'react';
 import { MapPin, Home, Clock } from 'lucide-react';
 
 const PropertyCard = ({ property }) => {
+  // Format relative time from publishedAt date
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return 'Récent';
+    const now = new Date();
+    const published = new Date(dateString);
+    const diffMs = now - published;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `${diffMins}min`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays === 1) return 'Hier';
+    if (diffDays < 7) return `${diffDays}j`;
+    if (diffWeeks < 5) return `${diffWeeks}sem`;
+    return `${diffMonths}mois`;
+  };
+
+  // Map typeBailleur to a readable label
+  const getOwnerLabel = (type) => {
+    if (!type) return 'Propriétaire';
+    const labels = {
+      'PARTICULIER': 'Particulier',
+      'AGENCE': 'Agence immobilière',
+      'PROMOTEUR': 'Promoteur immobilier',
+      'PROPRIETAIRE': 'Propriétaire',
+    };
+    return labels[type] || type;
+  };
+
   return (
     <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-primary-100 transition-all duration-500 group">
       <div className="h-56 bg-slate-100 relative overflow-hidden">
@@ -20,7 +53,7 @@ const PropertyCard = ({ property }) => {
       <div className="p-6">
         <div className="flex justify-between items-start mb-3">
           <h3 className="text-lg font-black text-slate-900 group-hover:text-primary-600 transition-colors leading-tight flex-1 mr-2">{property.title}</h3>
-          <p className="text-primary-600 font-black text-lg">{property.price.toLocaleString()} <span className="text-[10px]">FCFA</span></p>
+          <p className="text-primary-600 font-black text-lg">{property.price?.toLocaleString()} <span className="text-[10px]">FCFA</span></p>
         </div>
         
         <div className="flex items-center gap-2 text-slate-400 text-xs mb-6 font-medium">
@@ -35,12 +68,12 @@ const PropertyCard = ({ property }) => {
             </div>
             <div>
               <p className="text-slate-900 text-xs font-bold">{property.ownerName || 'Propriétaire'}</p>
-              <p className="text-slate-400 text-[10px]">Bailleur certifié</p>
+              <p className="text-slate-400 text-[10px]">{getOwnerLabel(property.ownerType)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-slate-300 text-[10px] font-bold">
             <Clock size={12} />
-            <span>2j</span>
+            <span>{getRelativeTime(property.publishedAt)}</span>
           </div>
         </div>
       </div>

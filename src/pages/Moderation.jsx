@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Check, X, Eye } from 'lucide-react';
 import axios from 'axios';
 import { BASE_URL } from '../api/config';
+import { io } from 'socket.io-client';
 
 const Moderation = () => {
   const [pendingProperties, setPendingProperties] = useState([]);
@@ -20,27 +21,41 @@ const Moderation = () => {
 
   useEffect(() => {
     fetchPending();
+
+    const socketURL = BASE_URL.replace('/api', '');
+    const socket = io(socketURL);
+
+    socket.on('property_created', () => fetchPending());
+    socket.on('property_updated', () => fetchPending());
+    socket.on('property_deleted', (id) => {
+      setPendingProperties(prev => prev.filter(p => p.id !== id));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const handleApprove = async (id) => {
     try {
       await axios.post(`${BASE_URL}/admin/properties/${id}/approve`);
       setPendingProperties(prev => prev.filter(p => p.id !== id));
-      alert('Le bien a été approuvé et est maintenant en ligne !');
+      alert("L'annonce signalée a été validée et remise en ligne avec succès !");
     } catch (err) {
       console.error('Erreur approbation:', err);
-      alert('Impossible d\'approuver le bien.');
+      alert('Impossible de conserver le bien.');
     }
   };
 
   const handleReject = async (id) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cette annonce signalée ?")) return;
     try {
       await axios.post(`${BASE_URL}/admin/properties/${id}/reject`);
       setPendingProperties(prev => prev.filter(p => p.id !== id));
-      alert('Le bien a été rejeté.');
+      alert("L'annonce signalée a été définitivement supprimée de la plateforme.");
     } catch (err) {
       console.error('Erreur rejet:', err);
-      alert('Impossible de rejeter le bien.');
+      alert('Impossible de supprimer le bien.');
     }
   };
 
@@ -57,13 +72,13 @@ const Moderation = () => {
       <header className="mb-10 flex justify-between items-center">
         <div>
           <h2 className="text-4xl font-black text-slate-900 mb-2 flex items-center gap-4">
-            <Shield className="text-primary-600" size={40} />
-            Modération
+            <Shield className="text-rose-600" size={40} />
+            Signalements
           </h2>
-          <p className="text-slate-500 font-medium">Validez les nouvelles annonces avant leur publication officielle.</p>
+          <p className="text-slate-500 font-medium">Modérez les annonces signalées par les utilisateurs pour contenu inapproprié.</p>
         </div>
-        <div className="bg-amber-100 text-amber-700 px-6 py-2 rounded-full font-black text-sm uppercase tracking-wider">
-          {pendingProperties.length} en attente
+        <div className="bg-rose-100 text-rose-700 px-6 py-2 rounded-full font-black text-sm uppercase tracking-wider">
+          {pendingProperties.length} signalé(s)
         </div>
       </header>
 
@@ -94,6 +109,11 @@ const Moderation = () => {
                       <p className="text-slate-400 text-xs italic">
                         {property.bien?.adresse?.ville || 'Côte d\'Ivoire'}, {property.bien?.adresse?.rue || ''}
                       </p>
+                      {property.raisonSignalement && (
+                        <div className="mt-2 text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-2.5 py-1.5 inline-block font-semibold">
+                          <span className="font-bold text-rose-800">Motif :</span> {property.raisonSignalement}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -110,15 +130,15 @@ const Moderation = () => {
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => handleApprove(property.id)}
-                      className="p-3 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all shadow-sm border border-emerald-100"
-                      title="Approuver"
+                      className="p-3 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all shadow-sm border border-emerald-100 cursor-pointer"
+                      title="Conserver l'annonce"
                     >
                       <Check size={20} strokeWidth={3} />
                     </button>
                     <button 
                       onClick={() => handleReject(property.id)}
-                      className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm border border-rose-100"
-                      title="Rejeter"
+                      className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm border border-rose-100 cursor-pointer"
+                      title="Supprimer l'annonce"
                     >
                       <X size={20} strokeWidth={3} />
                     </button>
@@ -132,7 +152,7 @@ const Moderation = () => {
         {pendingProperties.length === 0 && (
           <div className="p-20 text-center">
             <Shield size={64} className="mx-auto text-slate-100 mb-6" />
-            <p className="text-slate-400 font-bold text-lg">Aucun bien en attente de modération.</p>
+            <p className="text-slate-400 font-bold text-lg">Aucune annonce signalée pour le moment.</p>
           </div>
         )}
       </div>

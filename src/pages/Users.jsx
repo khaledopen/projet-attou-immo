@@ -19,6 +19,24 @@ const UsersPage = () => {
     }
   };
 
+  const toggleUserStatus = async (userId, currentStatus) => {
+    const newStatus = currentStatus === 'SUSPENDU' ? 'ACTIF' : 'SUSPENDU';
+    const confirmMessage = currentStatus === 'SUSPENDU'
+      ? "Voulez-vous réactiver ce compte ?"
+      : "Voulez-vous suspendre ce compte pour non-respect de la politique de confidentialité ?";
+      
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      await axios.patch(`${BASE_URL}/admin/users/${userId}/status`, { statut: newStatus });
+      // Update state
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, statut: newStatus } : u));
+    } catch (err) {
+      console.error('Erreur lors de la modification du statut:', err);
+      alert('Erreur lors de la modification du statut de l\'utilisateur.');
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -33,6 +51,85 @@ const UsersPage = () => {
     );
   });
 
+  const exportUsersCSV = () => {
+    const headers = ['Nom complet', 'Email', 'Telephone', 'Role', 'Date Inscription'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredUsers.map(user => {
+        const fullName = `"${user.prenom} ${user.nom}"`;
+        const email = `"${user.email}"`;
+        const telephone = `"${user.telephone || 'Non spécifié'}"`;
+        const role = `"${user.role}"`;
+        const dateStr = `"${new Date(user.dateInscription).toLocaleDateString('fr-FR')}"`;
+        return [fullName, email, telephone, role, dateStr].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "utilisateurs_attouhome.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportUsersPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const rowsHTML = filteredUsers.map(user => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${user.prenom} ${user.nom}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${user.email}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${user.telephone || 'Non spécifié'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${user.role}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${new Date(user.dateInscription).toLocaleDateString('fr-FR')}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>AttouHome - Liste des utilisateurs</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h2 { color: #0284c7; margin-bottom: 5px; }
+            p { margin-top: 0; color: #666; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background-color: #f8fafc; text-align: left; padding: 10px; font-weight: bold; border-bottom: 2px solid #ddd; }
+          </style>
+        </head>
+        <body>
+          <h2>AttouHome - Liste des utilisateurs</h2>
+          <p>Généré le ${new Date().toLocaleDateString('fr-FR')} - Total : ${filteredUsers.length} inscrits</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Nom complet</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Rôle</th>
+                <th>Date d'inscription</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -43,7 +140,7 @@ const UsersPage = () => {
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen">
-      <header className="mb-10 flex justify-between items-center">
+      <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
           <h2 className="text-4xl font-black text-slate-900 mb-2 flex items-center gap-4">
             <Users className="text-primary-600" size={40} />
@@ -51,8 +148,22 @@ const UsersPage = () => {
           </h2>
           <p className="text-slate-500 font-medium">Visualisez et gérez tous les comptes inscrits sur la plateforme.</p>
         </div>
-        <div className="bg-primary-100 text-primary-700 px-6 py-2 rounded-full font-black text-sm uppercase tracking-wider">
-          {filteredUsers.length} inscrits
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={exportUsersCSV}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all cursor-pointer"
+          >
+            Exporter Excel (CSV)
+          </button>
+          <button 
+            onClick={exportUsersPDF}
+            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all cursor-pointer"
+          >
+            Télécharger PDF
+          </button>
+          <div className="bg-primary-100 text-primary-700 px-6 py-2.5 rounded-full font-black text-sm uppercase tracking-wider">
+            {filteredUsers.length} inscrits
+          </div>
         </div>
       </header>
 
@@ -114,10 +225,32 @@ const UsersPage = () => {
                   </p>
                 </td>
                 <td className="px-8 py-6 text-right">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">
-                    <UserCheck size={14} />
-                    Actif
-                  </span>
+                  <div className="flex items-center justify-end gap-4">
+                    {user.statut === 'SUSPENDU' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-600">
+                        <Shield size={14} />
+                        Suspendu
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">
+                        <UserCheck size={14} />
+                        Actif
+                      </span>
+                    )}
+                    
+                    {user.role !== 'ADMIN' && (
+                      <button
+                        onClick={() => toggleUserStatus(user.id, user.statut)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          user.statut === 'SUSPENDU'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                            : 'bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100'
+                        }`}
+                      >
+                        {user.statut === 'SUSPENDU' ? 'Activer' : 'Suspendre'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

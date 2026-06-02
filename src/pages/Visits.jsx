@@ -33,6 +33,92 @@ const VisitsPage = () => {
     );
   });
 
+  const exportVisitsCSV = () => {
+    const headers = ['Locataire', 'Email Locataire', 'Bien Demande', 'Loyer', 'Date Visite', 'Statut'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredVisits.map(visit => {
+        const tenantName = `"${visit.locataire?.prenom} ${visit.locataire?.nom}"`;
+        const tenantEmail = `"${visit.locataire?.email}"`;
+        const propertyTitle = `"${visit.annonce?.titre}"`;
+        const price = `"${visit.annonce?.prix} FCFA"`;
+        const dateStr = `"${visit.dateProposee ? new Date(visit.dateProposee).toLocaleDateString('fr-FR') : 'Non programmée'}"`;
+        const status = `"${visit.statut}"`;
+        return [tenantName, tenantEmail, propertyTitle, price, dateStr, status].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "visites_attouhome.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportVisitsPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const rowsHTML = filteredVisits.map(visit => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.locataire?.prenom} ${visit.locataire?.nom}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.locataire?.email}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.annonce?.titre}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.annonce?.prix?.toLocaleString()} FCFA</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+          ${visit.dateProposee ? new Date(visit.dateProposee).toLocaleDateString('fr-FR') : 'Non programmée'}
+        </td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: ${
+          visit.statut === 'ACCEPTEE' ? '#10b981' : visit.statut === 'REFUSEE' ? '#ef4444' : '#f59e0b'
+        }">${visit.statut}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>AttouHome - Liste des visites et RDV</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h2 { color: #0284c7; margin-bottom: 5px; }
+            p { margin-top: 0; color: #666; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background-color: #f8fafc; text-align: left; padding: 10px; font-weight: bold; border-bottom: 2px solid #ddd; }
+          </style>
+        </head>
+        <body>
+          <h2>AttouHome - Liste des visites et RDV</h2>
+          <p>Généré le ${new Date().toLocaleDateString('fr-FR')} - Total : ${filteredVisits.length} demandes</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Locataire</th>
+                <th>Email Locataire</th>
+                <th>Bien Demandé</th>
+                <th>Loyer</th>
+                <th>Date de Visite</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -43,7 +129,7 @@ const VisitsPage = () => {
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen">
-      <header className="mb-10 flex justify-between items-center">
+      <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
           <h2 className="text-4xl font-black text-slate-900 mb-2 flex items-center gap-4">
             <Calendar className="text-primary-600" size={40} />
@@ -51,8 +137,22 @@ const VisitsPage = () => {
           </h2>
           <p className="text-slate-500 font-medium">Consultez l'historique et l'état des demandes de visites proposées.</p>
         </div>
-        <div className="bg-primary-100 text-primary-700 px-6 py-2 rounded-full font-black text-sm uppercase tracking-wider">
-          {filteredVisits.length} demandes
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={exportVisitsCSV}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all cursor-pointer"
+          >
+            Exporter Excel (CSV)
+          </button>
+          <button 
+            onClick={exportVisitsPDF}
+            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all cursor-pointer"
+          >
+            Télécharger PDF
+          </button>
+          <div className="bg-primary-100 text-primary-700 px-6 py-2.5 rounded-full font-black text-sm uppercase tracking-wider">
+            {filteredVisits.length} demandes
+          </div>
         </div>
       </header>
 

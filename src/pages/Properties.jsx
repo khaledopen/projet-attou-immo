@@ -84,6 +84,8 @@ const Properties = () => {
                 address: item.bien?.adresse?.rue || '',
                 status: item.statut === 'PUBLIEE' ? 'AVAILABLE' : 'RENTED',
                 ownerName: item.proprietaire ? `${item.proprietaire.prenom} ${item.proprietaire.nom}` : 'Propriétaire',
+                ownerType: item.proprietaire?.typeBailleur || item.proprietaire?.role || 'PROPRIETAIRE',
+                publishedAt: item.datePublication,
                 imageUrl: item.photos?.[0]?.url || ''
               }} 
             />
