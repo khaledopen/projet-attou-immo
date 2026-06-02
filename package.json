@@ -3,13 +3,13 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "node ./scripts/start-with-tunnel.js",
     "start:fix": "cross-env EXPO_OFFLINE=1 expo start --tunnel",
     "start:ngrok": "cross-env EXPO_OFFLINE=1 EXPO_PACKAGER_PROXY_URL=https://average-culminate-credible.ngrok-free.dev expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "android": "node ./scripts/start-with-tunnel.js --android",
+    "ios": "node ./scripts/start-with-tunnel.js --ios",
+    "web": "node ./scripts/start-with-tunnel.js --web",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -20,7 +20,9 @@
     "@react-navigation/native": "^7.1.8",
     "axios": "^1.16.0",
     "expo": "~54.0.33",
+    "expo-auth-session": "~7.0.11",
     "expo-constants": "~18.0.13",
+    "expo-crypto": "~15.0.9",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",

@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../../api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../api/config';
 import { useRouter } from 'expo-router';
+import { useSocket } from '../../hooks/useSocket';
 
 const OwnerProperties = () => {
   const router = useRouter();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const socket = useSocket();
 
   const fetchMyProperties = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
       const userDataStr = await AsyncStorage.getItem('userData');
       
       let proprietaireId = undefined;
@@ -23,13 +26,12 @@ const OwnerProperties = () => {
         proprietaireId = userData.id;
       }
 
-      const response = await axios.get(`${BASE_URL}/properties`, {
-        params: proprietaireId ? { proprietaireId } : {},
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await api.get('/properties', {
+        params: proprietaireId ? { proprietaireId } : {}
       });
       setProperties(response.data);
-    } catch (error) {
-      console.error('Erreur mes biens:', error);
+    } catch (error: any) {
+      console.log('Erreur mes biens:', error.message || error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -48,10 +50,7 @@ const OwnerProperties = () => {
           onPress: async () => {
             try {
               setLoading(true);
-              const token = await AsyncStorage.getItem('userToken');
-              await axios.delete(`${BASE_URL}/properties/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
+              await api.delete(`/properties/${id}`);
               Alert.alert('Succès', 'L\'annonce a été supprimée avec succès.');
               fetchMyProperties();
             } catch (error) {
@@ -69,10 +68,28 @@ const OwnerProperties = () => {
     fetchMyProperties();
   }, []);
 
+  useEffect(() => {
+    if (socket) {
+      const handleRealtimeUpdate = () => {
+        fetchMyProperties();
+      };
+      
+      socket.on('property_created', handleRealtimeUpdate);
+      socket.on('property_updated', handleRealtimeUpdate);
+      socket.on('property_deleted', handleRealtimeUpdate);
+      
+      return () => {
+        socket.off('property_created', handleRealtimeUpdate);
+        socket.off('property_updated', handleRealtimeUpdate);
+        socket.off('property_deleted', handleRealtimeUpdate);
+      };
+    }
+  }, [socket]);
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       {item.photos?.[0]?.url ? (
-        <Image source={{ uri: item.photos[0].url }} style={styles.image} />
+        <Image source={{ uri: item.photos[0].url, headers: { 'bypass-tunnel-reminder': 'true' } }} style={styles.image} />
       ) : (
         <View style={styles.noImagePlaceholder}>
           <Ionicons name="image-outline" size={40} color="#94a3b8" />

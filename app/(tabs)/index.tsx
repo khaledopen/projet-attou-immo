@@ -17,6 +17,11 @@ const OwnerDashboard = () => {
   const fetchData = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        console.log('[Dashboard] No token found, redirecting to login...');
+        router.replace('/login');
+        return;
+      }
       const userDataStr = await AsyncStorage.getItem('userData');
       const headers = { Authorization: `Bearer ${token}` };
 
@@ -40,8 +45,13 @@ const OwnerDashboard = () => {
         visits: visitsRes.data.length
       });
       setRecentVisits(visitsRes.data.slice(0, 3));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur dashboard:', error);
+      if (error.response && error.response.status === 401) {
+        console.log('[Dashboard] Session expired (401), clearing storage and redirecting to login...');
+        await AsyncStorage.multiRemove(['userToken', 'userData']);
+        router.replace('/login');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

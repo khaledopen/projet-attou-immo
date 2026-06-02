@@ -13,12 +13,13 @@ const OwnerVisits = () => {
   const fetchVisits = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
       const response = await axios.get(`${BASE_URL}/visits/owner`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setVisits(response.data);
-    } catch (error) {
-      console.error('Erreur visites:', error);
+    } catch (error: any) {
+      console.log('Erreur visites:', error.message || error);
     } finally {
       setLoading(false);
       setRefreshing(false);

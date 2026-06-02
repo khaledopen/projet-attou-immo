@@ -1,29 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          setUser(JSON.parse(userData));
-        }
-      } catch (error) {
-        console.error('Erreur profil:', error);
-      } finally {
-        setLoading(false);
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      } else {
+        setUser(null);
       }
-    };
+    } catch (error) {
+      console.error('Erreur profil:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadUserData();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserData();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleLogout = async () => {
     Alert.alert('Déconnexion', 'Se déconnecter de AttouHome Pro ?', [
@@ -51,7 +59,18 @@ const ProfileScreen = () => {
         </View>
         <Text style={styles.userName}>{user ? `${user.prenom} ${user.nom}` : 'Propriétaire'}</Text>
         <Text style={styles.userEmail}>{user?.email}</Text>
-        <Text style={styles.raisonSociale}>{user?.raisonSociale || 'Indépendant'}</Text>
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeType}>
+            {user?.typeBailleur 
+              ? (user.typeBailleur === 'PARTICULIER' ? '👤 Particulier' : user.typeBailleur === 'AGENCE' ? '🏢 Agence' : '🏗️ Promoteur') 
+              : '👤 Indépendant'}
+          </Text>
+          {user?.raisonSociale ? (
+            <Text style={styles.badgeRaison}>
+              💼 {user.raisonSociale}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
       <View style={styles.menu}>
@@ -70,6 +89,7 @@ const ProfileScreen = () => {
         <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color="#ef4444" />
           <Text style={[styles.menuText, { color: '#ef4444' }]}>Déconnexion</Text>
+          <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -85,7 +105,9 @@ const styles = StyleSheet.create({
   avatarText: { color: '#fff', fontSize: 36, fontWeight: 'bold' },
   userName: { fontSize: 22, fontWeight: '800', color: '#1e293b' },
   userEmail: { fontSize: 14, color: '#64748b', marginTop: 5 },
-  raisonSociale: { fontSize: 12, fontWeight: '700', color: '#0ea5e9', backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginTop: 10 },
+  badgeContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 12 },
+  badgeType: { fontSize: 12, fontWeight: '700', color: '#0ea5e9', backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
+  badgeRaison: { fontSize: 12, fontWeight: '700', color: '#475569', backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
   menu: { backgroundColor: '#fff', borderRadius: 25, padding: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15, elevation: 2 },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
   menuText: { flex: 1, marginLeft: 15, fontSize: 16, fontWeight: '600', color: '#1e293b' }

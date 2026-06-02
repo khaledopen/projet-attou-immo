@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { BASE_URL } from '../api/config';
+// import { BASE_URL } from '../api/config'; // removed, api instance handles base URL
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
@@ -33,11 +33,11 @@ const AddProperty = () => {
       Alert.alert('Permission requise', 'Accès à la galerie requis pour ajouter des photos.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.3,
-    });
+const result = await ImagePicker.launchImageLibraryAsync({
+  mediaTypes: ['images'],
+  allowsMultipleSelection: true,
+  quality: 0.3,
+});
     if (!result.canceled) {
       const uris = result.assets.map(asset => asset.uri);
       setImages([...images, ...uris]);
@@ -51,9 +51,9 @@ const AddProperty = () => {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.3,
-    });
+    mediaTypes: ['images'],
+    quality: 0.3,
+  });
     if (!result.canceled && result.assets?.[0]?.uri) {
       setImages([...images, result.assets[0].uri]);
     }
@@ -65,24 +65,52 @@ const AddProperty = () => {
 
   const uploadImages = async (imageUris: string[], token: string) => {
     const uploadedUrls: string[] = [];
-    for (const uri of imageUris) {
+    const retries = 3;
+    const delayMs = 1500;
+
+    for (let index = 0; index < imageUris.length; index++) {
+      const uri = imageUris[index];
       const formData = new FormData();
-      const filename = uri.split('/').pop() || 'photo.jpg';
+      const filename = uri.split('/').pop() || `photo_${index}.jpg`;
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : `image/jpeg`;
-      
+
       formData.append('file', {
         uri: uri,
         name: filename,
         type,
       } as any);
 
-      const res = await axios.post(`${BASE_URL}/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      uploadedUrls.push(res.data.url);
+      let success = false;
+      let lastError: any = null;
+
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          console.log(`[Upload] Image ${index + 1}/${imageUris.length} - Tentative ${attempt}/${retries}`);
+          const res = await api.post('/upload', formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          uploadedUrls.push(res.data.url);
+          success = true;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[Upload] Échec tentative ${attempt}/${retries} pour l'image ${index + 1}:`, err.message);
+          
+          if (attempt < retries) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+        }
+      }
+
+      if (!success) {
+        throw new Error(
+          `Impossible de charger l'image ${index + 1}. Une erreur réseau temporaire (502 Bad Gateway ou Timeout) s'est produite avec le tunnel de développement. Veuillez réessayer dans quelques instants. Détail: ${lastError?.message || lastError}`
+        );
+      }
     }
     return uploadedUrls;
   };
@@ -105,7 +133,7 @@ const AddProperty = () => {
       if (images.length > 0) {
         uploadedUrls = await uploadImages(images, token!);
       }
-      
+
       const payload = {
         ...form,
         prix: parseFloat(form.prix),
@@ -117,7 +145,7 @@ const AddProperty = () => {
         photos: uploadedUrls,
       };
 
-      await axios.post(`${BASE_URL}/properties`, payload, {
+      await api.post('/properties', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -146,8 +174,8 @@ const AddProperty = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 30}
       >
@@ -181,28 +209,28 @@ const AddProperty = () => {
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Informations principales</Text>
-            <TextInput 
-              style={styles.input} 
+            <TextInput
+              style={styles.input}
               placeholder="Titre (ex: Appartement F4 Cocody)"
               placeholderTextColor="#94a3b8"
               value={form.titre}
-              onChangeText={(v) => setForm({...form, titre: v})}
+              onChangeText={(v) => setForm({ ...form, titre: v })}
             />
-            <TextInput 
-              style={[styles.input, styles.inputMultiline]} 
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
               placeholder="Description détaillée de votre bien..."
               placeholderTextColor="#94a3b8"
               multiline
               value={form.description}
-              onChangeText={(v) => setForm({...form, description: v})}
+              onChangeText={(v) => setForm({ ...form, description: v })}
             />
-            <TextInput 
-              style={styles.input} 
+            <TextInput
+              style={styles.input}
               placeholder="Prix (FCFA / mois)"
               placeholderTextColor="#94a3b8"
               keyboardType="numeric"
               value={form.prix}
-              onChangeText={(v) => setForm({...form, prix: v})}
+              onChangeText={(v) => setForm({ ...form, prix: v })}
             />
           </View>
 
@@ -210,10 +238,10 @@ const AddProperty = () => {
             <Text style={styles.sectionTitle}>Type de bien</Text>
             <View style={styles.typeSelector}>
               {propertyTypes.map((type) => (
-                <TouchableOpacity 
-                  key={type} 
+                <TouchableOpacity
+                  key={type}
                   style={[styles.typeButton, form.typeBien === type && styles.typeButtonActive]}
-                  onPress={() => setForm({...form, typeBien: type})}
+                  onPress={() => setForm({ ...form, typeBien: type })}
                 >
                   <Text style={[styles.typeButtonText, form.typeBien === type && styles.typeButtonTextActive]}>
                     {type}
@@ -226,65 +254,65 @@ const AddProperty = () => {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Caractéristiques</Text>
             <View style={styles.row}>
-              <TextInput 
-                style={[styles.input, { flex: 1 }]} 
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
                 placeholder="Surface (m²)"
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 value={form.surface}
-                onChangeText={(v) => setForm({...form, surface: v})}
+                onChangeText={(v) => setForm({ ...form, surface: v })}
               />
-              <TextInput 
-                style={[styles.input, { flex: 1 }]} 
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
                 placeholder="Nb Pièces"
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 value={form.nombrePieces}
-                onChangeText={(v) => setForm({...form, nombrePieces: v})}
+                onChangeText={(v) => setForm({ ...form, nombrePieces: v })}
               />
             </View>
             <View style={styles.row}>
-              <TextInput 
-                style={[styles.input, { flex: 1 }]} 
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
                 placeholder="Chambres"
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 value={form.nombreChambres}
-                onChangeText={(v) => setForm({...form, nombreChambres: v})}
+                onChangeText={(v) => setForm({ ...form, nombreChambres: v })}
               />
-              <TextInput 
-                style={[styles.input, { flex: 1 }]} 
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
                 placeholder="Étage"
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 value={form.etage}
-                onChangeText={(v) => setForm({...form, etage: v})}
+                onChangeText={(v) => setForm({ ...form, etage: v })}
               />
             </View>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Localisation</Text>
-            <TextInput 
-              style={styles.input} 
+            <TextInput
+              style={styles.input}
               placeholder="Ville (ex: Abidjan)"
               placeholderTextColor="#94a3b8"
               value={form.ville}
-              onChangeText={(v) => setForm({...form, ville: v})}
+              onChangeText={(v) => setForm({ ...form, ville: v })}
             />
-            <TextInput 
-              style={styles.input} 
+            <TextInput
+              style={styles.input}
               placeholder="Rue / Quartier"
               placeholderTextColor="#94a3b8"
               value={form.rue}
-              onChangeText={(v) => setForm({...form, rue: v})}
+              onChangeText={(v) => setForm({ ...form, rue: v })}
             />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.submitButton}
           onPress={handleSubmit}
           disabled={loading}

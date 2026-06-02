@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { BASE_URL } from '../api/config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
@@ -34,10 +33,7 @@ const EditProperty = () => {
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       try {
-        const token = await AsyncStorage.getItem('userToken');
-        const res = await axios.get(`${BASE_URL}/properties/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get(`/properties/${id}`);
         
         const data = res.data;
         setForm({
@@ -78,7 +74,7 @@ const EditProperty = () => {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.3,
     });
@@ -95,7 +91,7 @@ const EditProperty = () => {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.3,
     });
     if (!result.canceled && result.assets?.[0]?.uri) {
@@ -113,9 +109,13 @@ const EditProperty = () => {
 
   const uploadImages = async (imageUris: string[], token: string) => {
     const uploadedUrls: string[] = [];
-    for (const uri of imageUris) {
+    const retries = 3;
+    const delayMs = 1500;
+
+    for (let index = 0; index < imageUris.length; index++) {
+      const uri = imageUris[index];
       const formData = new FormData();
-      const filename = uri.split('/').pop() || 'photo.jpg';
+      const filename = uri.split('/').pop() || `photo_${index}.jpg`;
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : `image/jpeg`;
       
@@ -125,12 +125,35 @@ const EditProperty = () => {
         type,
       } as any);
 
-      const res = await axios.post(`${BASE_URL}/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      uploadedUrls.push(res.data.url);
+      let success = false;
+      let lastError: any = null;
+
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          console.log(`[Upload] Image ${index + 1}/${imageUris.length} - Tentative ${attempt}/${retries}`);
+          const res = await api.post('/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          uploadedUrls.push(res.data.url);
+          success = true;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[Upload] Échec tentative ${attempt}/${retries} pour l'image ${index + 1}:`, err.message);
+          
+          if (attempt < retries) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+        }
+      }
+
+      if (!success) {
+        throw new Error(
+          `Impossible de charger l'image ${index + 1}. Une erreur réseau temporaire (502 Bad Gateway ou Timeout) s'est produite avec le tunnel de développement. Veuillez réessayer dans quelques instants. Détail: ${lastError?.message || lastError}`
+        );
+      }
     }
     return uploadedUrls;
   };
@@ -163,9 +186,7 @@ const EditProperty = () => {
         photos: allPhotos,
       };
 
-      await axios.put(`${BASE_URL}/properties/${id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/properties/${id}`, payload);
 
       Alert.alert('Succès', 'Votre annonce a été modifiée avec succès !', [
         { text: 'Super', onPress: () => router.replace('/(tabs)/properties') }
@@ -217,7 +238,7 @@ const EditProperty = () => {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewScroll}>
                   {existingPhotos.map((url, index) => (
                     <View key={index} style={styles.previewImageContainer}>
-                      <Image source={{ uri: url }} style={styles.previewImage} />
+                      <Image source={{ uri: url, headers: { 'bypass-tunnel-reminder': 'true' } }} style={styles.previewImage} />
                       <TouchableOpacity style={styles.removeImageButton} onPress={() => removeExistingImage(index)}>
                         <Ionicons name="close-circle" size={22} color="#ef4444" />
                       </TouchableOpacity>
