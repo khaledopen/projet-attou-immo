@@ -6,6 +6,7 @@ import Properties from './pages/Properties';
 import Moderation from './pages/Moderation';
 import Users from './pages/Users';
 import Visits from './pages/Visits';
+import Settings from './pages/Settings';
 
 const App = () => {
   return (
@@ -19,7 +20,7 @@ const App = () => {
             <Route path="/moderation" element={<Moderation />} />
             <Route path="/users" element={<Users />} />
             <Route path="/visits" element={<Visits />} />
-            <Route path="/settings" element={<div className="p-8"><h2 className="text-2xl font-bold">Paramètres</h2></div>} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
       </div>

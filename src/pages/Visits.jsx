@@ -25,26 +25,32 @@ const VisitsPage = () => {
 
   const filteredVisits = visits.filter(visit => {
     const term = searchQuery.toLowerCase();
+    const owner = visit.annonce?.proprietaire;
     return (
       visit.locataire?.nom?.toLowerCase().includes(term) ||
       visit.locataire?.prenom?.toLowerCase().includes(term) ||
       visit.annonce?.titre?.toLowerCase().includes(term) ||
-      visit.statut?.toLowerCase().includes(term)
+      visit.statut?.toLowerCase().includes(term) ||
+      owner?.nom?.toLowerCase().includes(term) ||
+      owner?.prenom?.toLowerCase().includes(term) ||
+      owner?.email?.toLowerCase().includes(term)
     );
   });
 
   const exportVisitsCSV = () => {
-    const headers = ['Locataire', 'Email Locataire', 'Bien Demande', 'Loyer', 'Date Visite', 'Statut'];
+    const headers = ['Locataire', 'Email Locataire', 'Propriétaire', 'Email Propriétaire', 'Bien Demande', 'Loyer', 'Date Visite', 'Statut'];
     const csvContent = [
       headers.join(','),
       ...filteredVisits.map(visit => {
         const tenantName = `"${visit.locataire?.prenom} ${visit.locataire?.nom}"`;
         const tenantEmail = `"${visit.locataire?.email}"`;
+        const ownerName = visit.annonce?.proprietaire ? `"${visit.annonce.proprietaire.prenom} ${visit.annonce.proprietaire.nom}"` : '"N/A"';
+        const ownerEmail = visit.annonce?.proprietaire ? `"${visit.annonce.proprietaire.email}"` : '"N/A"';
         const propertyTitle = `"${visit.annonce?.titre}"`;
         const price = `"${visit.annonce?.prix} FCFA"`;
         const dateStr = `"${visit.dateProposee ? new Date(visit.dateProposee).toLocaleDateString('fr-FR') : 'Non programmée'}"`;
         const status = `"${visit.statut}"`;
-        return [tenantName, tenantEmail, propertyTitle, price, dateStr, status].join(',');
+        return [tenantName, tenantEmail, ownerName, ownerEmail, propertyTitle, price, dateStr, status].join(',');
       })
     ].join('\n');
 
@@ -66,6 +72,8 @@ const VisitsPage = () => {
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.locataire?.prenom} ${visit.locataire?.nom}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.locataire?.email}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.annonce?.proprietaire ? `${visit.annonce.proprietaire.prenom} ${visit.annonce.proprietaire.nom}` : 'N/A'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.annonce?.proprietaire?.email || 'N/A'}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.annonce?.titre}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${visit.annonce?.prix?.toLocaleString()} FCFA</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">
@@ -97,6 +105,8 @@ const VisitsPage = () => {
               <tr>
                 <th>Locataire</th>
                 <th>Email Locataire</th>
+                <th>Propriétaire</th>
+                <th>Email Propriétaire</th>
                 <th>Bien Demandé</th>
                 <th>Loyer</th>
                 <th>Date de Visite</th>
@@ -161,7 +171,7 @@ const VisitsPage = () => {
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text" 
-            placeholder="Rechercher par locataire, annonce, statut..." 
+            placeholder="Rechercher par locataire, propriétaire, annonce, statut..." 
             className="w-full pl-14 pr-6 py-4 bg-white border border-slate-100 rounded-2xl text-slate-700 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -174,6 +184,7 @@ const VisitsPage = () => {
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
               <th className="px-8 py-6 text-slate-400 font-bold text-xs uppercase tracking-widest">Locataire</th>
+              <th className="px-8 py-6 text-slate-400 font-bold text-xs uppercase tracking-widest">Propriétaire</th>
               <th className="px-8 py-6 text-slate-400 font-bold text-xs uppercase tracking-widest">Bien Demandé</th>
               <th className="px-8 py-6 text-slate-400 font-bold text-xs uppercase tracking-widest">Date de visite</th>
               <th className="px-8 py-6 text-slate-400 font-bold text-xs uppercase tracking-widest text-right">Statut</th>
@@ -192,6 +203,21 @@ const VisitsPage = () => {
                       <p className="text-slate-400 text-xs">{visit.locataire?.email}</p>
                     </div>
                   </div>
+                </td>
+                <td className="px-8 py-6">
+                  {visit.annonce?.proprietaire ? (
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+                        {visit.annonce.proprietaire.prenom?.[0] || 'P'}
+                      </div>
+                      <div>
+                        <p className="text-slate-900 font-bold text-lg">{visit.annonce.proprietaire.prenom} {visit.annonce.proprietaire.nom}</p>
+                        <p className="text-slate-400 text-xs">{visit.annonce.proprietaire.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 italic">Non disponible</p>
+                  )}
                 </td>
                 <td className="px-8 py-6">
                   <p className="text-slate-800 font-bold">{visit.annonce?.titre}</p>
