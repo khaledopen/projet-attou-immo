@@ -4,7 +4,7 @@ import {
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
   Alert, Image
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +19,7 @@ const GOOGLE_CLIENT_ID_WEB = '57003195747-e1denhbqp169eucbkjjsoq2jvmqruhlk.apps.
 
 const LoginScreen = () => {
   const router = useRouter();
+  const { redirectTo } = useLocalSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,11 @@ const LoginScreen = () => {
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(user));
         Alert.alert('Connexion réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-        router.replace('/(tabs)');
+        if (redirectTo) {
+          router.replace(redirectTo as any);
+        } else {
+          router.replace('/(tabs)');
+        }
       } catch (loginErr: any) {
         console.log('[Google] User not found, registering…');
         // Nouveau compte → inscription automatique
@@ -73,7 +78,11 @@ const LoginScreen = () => {
           await AsyncStorage.setItem('userToken', token);
           await AsyncStorage.setItem('userData', JSON.stringify(user));
           Alert.alert('Inscription réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-          router.replace('/(tabs)');
+          if (redirectTo) {
+            router.replace(redirectTo as any);
+          } else {
+            router.replace('/(tabs)');
+          }
         } catch (regErr: any) {
           console.log('[Google] Register failed:', regErr?.response?.data || regErr?.message);
           const errMsg = regErr.response?.data?.message || regErr.message || '';
@@ -106,7 +115,11 @@ const LoginScreen = () => {
       const { token, user } = response.data;
       await AsyncStorage.setItem('userToken', token);
       await AsyncStorage.setItem('userData', JSON.stringify(user));
-      router.replace('/(tabs)');
+      if (redirectTo) {
+        router.replace(redirectTo as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       console.log('Login error:', error.response?.data || error.message);
       let msg = 'Email ou mot de passe incorrect.';
@@ -262,7 +275,7 @@ const LoginScreen = () => {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Pas encore de compte ? </Text>
-              <TouchableOpacity onPress={() => router.push('/register')}>
+              <TouchableOpacity onPress={() => router.push({ pathname: '/register', params: { redirectTo } })}>
                 <Text style={styles.registerLink}>S'inscrire</Text>
               </TouchableOpacity>
             </View>

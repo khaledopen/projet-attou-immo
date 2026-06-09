@@ -19,7 +19,7 @@ const FavoritesScreen = () => {
       const stored = await AsyncStorage.getItem('favorites');
       let storedFavs = stored ? JSON.parse(stored) : [];
       
-      // Fetch fresh properties from backend to ensure photos/details are up-to-date and never disappear!
+      // Récupérer les propriétés fraîches depuis le backend pour s'assurer que les photos/détails sont à jour et ne disparaissent jamais !
       const response = await api.get('/properties');
       const freshProperties = response.data;
       

@@ -12,15 +12,15 @@ prs = Presentation()
 prs.slide_width = Inches(13.333)
 prs.slide_height = Inches(7.5)
 
-# Color Palette - Sleek Premium Modern Theme
-COLOR_BG = RGBColor(248, 250, 252)       # Slate 50 (Very light gray-blue)
-COLOR_NAVY = RGBColor(15, 23, 42)       # Slate 900 (Deep modern navy)
-COLOR_BLUE = RGBColor(2, 132, 199)      # Sky 600 (Vibrant active blue)
-COLOR_LIGHT_BLUE = RGBColor(224, 242, 254) # Sky 100 (Soft background blue)
-COLOR_ORANGE = RGBColor(249, 115, 22)   # Orange 500 (Warm branding orange)
+# Palette de couleurs - Thème moderne, épuré et premium
+COLOR_BG = RGBColor(248, 250, 252)       # Slate 50 (Gris-bleu très clair)
+COLOR_NAVY = RGBColor(15, 23, 42)       # Slate 900 (Bleu nuit moderne profond)
+COLOR_BLUE = RGBColor(2, 132, 199)      # Sky 600 (Bleu actif vif)
+COLOR_LIGHT_BLUE = RGBColor(224, 242, 254) # Sky 100 (Bleu ciel de fond doux)
+COLOR_ORANGE = RGBColor(249, 115, 22)   # Orange 500 (Orange de marque chaleureux)
 COLOR_WHITE = RGBColor(255, 255, 255)   # White
-COLOR_GRAY = RGBColor(100, 116, 139)     # Slate 500 (Subtle neutral text)
-COLOR_BORDER = RGBColor(226, 232, 240)   # Slate 200 (Soft grid lines)
+COLOR_GRAY = RGBColor(100, 116, 139)     # Slate 500 (Texte neutre subtil)
+COLOR_BORDER = RGBColor(226, 232, 240)   # Slate 200 (Lignes de grille douces)
 
 def set_slide_background(slide, color):
     """Sets a solid color background for the slide."""
@@ -30,7 +30,7 @@ def set_slide_background(slide, color):
     fill.fore_color.rgb = color
 
 def add_textbox(slide, text, left, top, width, height, font_name="Calibri", font_size=16, font_color=COLOR_NAVY, bold=False, align=PP_ALIGN.LEFT):
-    """Helper to add a standardized text frame."""
+    """Fonction d'aide pour ajouter un bloc de texte standardisé."""
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     tf.word_wrap = True
@@ -44,7 +44,7 @@ def add_textbox(slide, text, left, top, width, height, font_name="Calibri", font
     return txBox
 
 def add_paragraph(tf, text, font_size=14, font_color=COLOR_NAVY, bold=False, space_before=10):
-    """Appends a paragraph to an existing text frame."""
+    """Ajoute un paragraphe à un bloc de texte existant."""
     p = tf.add_paragraph()
     p.text = str(text)
     p.font.name = "Calibri"
@@ -55,14 +55,14 @@ def add_paragraph(tf, text, font_size=14, font_color=COLOR_NAVY, bold=False, spa
     return p
 
 def add_slide_header(slide, title, category="ATTOUHOME - RAPPORT DE DÉVELOPPEMENT"):
-    """Adds a consistent premium header block to normal slides."""
-    # Category Tag
+    """Ajoute un en-tête premium standardisé aux diapositives normales."""
+    # Étiquette de catégorie
     add_textbox(slide, category.upper(), Inches(0.8), Inches(0.4), Inches(11.7), Inches(0.3), font_size=10, font_color=COLOR_BLUE, bold=True)
-    # Slide Title
+    # Titre de la diapositive
     add_textbox(slide, title, Inches(0.8), Inches(0.7), Inches(11.7), Inches(0.6), font_size=24, font_color=COLOR_NAVY, bold=True)
 
 def add_card_shape(slide, left, top, width, height, bg_color=COLOR_WHITE, border_color=COLOR_BORDER):
-    """Creates a beautiful card container to structure slide content."""
+    """Crée un joli conteneur de carte pour structurer le contenu de la diapositive."""
     shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     shape.fill.solid()
     shape.fill.fore_color.rgb = bg_color
@@ -71,12 +71,12 @@ def add_card_shape(slide, left, top, width, height, bg_color=COLOR_WHITE, border
     return shape
 
 # ==============================================================================
-# SLIDE 1: COVER SLIDE (Dark Navy Premium Theme)
+# DIAPOSITIVE 1 : DIAPOSITIVE DE COUVERTURE (Thème bleu nuit premium)
 # ==============================================================================
 slide1 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide1, COLOR_NAVY)
 
-# Large stylized background element
+# Grand élément de fond stylisé
 accent_card = add_card_shape(slide1, Inches(0.8), Inches(2.2), Inches(0.15), Inches(3.2), bg_color=COLOR_BLUE, border_color=None)
 
 # Main Title
@@ -116,13 +116,13 @@ p_meta2.font.color.rgb = COLOR_GRAY
 p_meta2.space_before = Pt(5)
 
 # ==============================================================================
-# SLIDE 2: THE 360° ARCHITECTURE OVERVIEW (Light Slide, Multi-Card Layout)
+# DIAPOSITIVE 2 : VUE D'ENSEMBLE DE L'ARCHITECTURE 360° (Diapositive claire, mise en page multi-cartes)
 # ==============================================================================
 slide2 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide2, COLOR_BG)
 add_slide_header(slide2, "Une Architecture Multi-Plateforme Complète")
 
-# Card 1: Backend & Prisma
+# Carte 1 : Backend & Prisma
 add_card_shape(slide2, Inches(0.8), Inches(1.6), Inches(3.6), Inches(4.8))
 add_textbox(slide2, "⚡ CORE ENGINE & BASE", Inches(1.1), Inches(1.9), Inches(3.0), Inches(0.4), font_size=13, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide2, "Backend Node.js, Express & Prisma", Inches(1.1), Inches(2.3), Inches(3.0), Inches(0.6), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -136,7 +136,7 @@ add_paragraph(tf1, "• Schémas de base de données PostgreSQL robustes managé
 add_paragraph(tf1, "• Intégration en temps réel des services de modération d'annonces", font_size=13, font_color=COLOR_GRAY)
 add_paragraph(tf1, "• Notifications Push & tunnels WebSocket actifs pour la messagerie instantanée", font_size=13, font_color=COLOR_GRAY)
 
-# Card 2: Mobile Apps (Tenant & Owner)
+# Carte 2 : Applications mobiles (Locataire & Propriétaire)
 add_card_shape(slide2, Inches(4.8), Inches(1.6), Inches(3.6), Inches(4.8))
 add_textbox(slide2, "📱 COMPAGNON MOBILE", Inches(5.1), Inches(1.9), Inches(3.0), Inches(0.4), font_size=13, font_color=COLOR_ORANGE, bold=True)
 add_textbox(slide2, "Applications iOS & Android", Inches(5.1), Inches(2.3), Inches(3.0), Inches(0.6), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -150,7 +150,7 @@ add_paragraph(tf2, "• Tenant App : Recherche premium, favoris locaux offline &
 add_paragraph(tf2, "• Owner App : Dépôt d'annonces rapide avec sélection et upload d'images", font_size=13, font_color=COLOR_GRAY)
 add_paragraph(tf2, "• Géolocalisation dynamique inverse pour le repérage auto des coordonnées", font_size=13, font_color=COLOR_GRAY)
 
-# Card 3: Admin Web Panel
+# Carte 3 : Panneau web d'administration
 add_card_shape(slide2, Inches(8.8), Inches(1.6), Inches(3.6), Inches(4.8))
 add_textbox(slide2, "🖥️ PILOTAGE CENTRAL", Inches(9.1), Inches(1.9), Inches(3.0), Inches(0.4), font_size=13, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide2, "IvoireAdmin Dashboard", Inches(9.1), Inches(2.3), Inches(3.0), Inches(0.6), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -165,13 +165,13 @@ add_paragraph(tf3, "• Gestion des utilisateurs, modération des biens signalé
 add_paragraph(tf3, "• Statistiques dynamiques sur l'activité des visites et taux d'engagement", font_size=13, font_color=COLOR_GRAY)
 
 # ==============================================================================
-# SLIDE 3: RESILIENCE & LOCAL TUNNEL AUTOMATION (Light Slide, 2-Column Split Layout)
+# DIAPOSITIVE 3 : RÉSILIENCE & AUTOMATISATION DU TUNNEL LOCAL (Diapositive claire, mise en page divisée en 2 colonnes)
 # ==============================================================================
 slide3 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide3, COLOR_BG)
 add_slide_header(slide3, "Zéro Coupure : Résilience Réseau & Tunneling Automatique")
 
-# Left Column (Concept & Tunnel)
+# Colonne gauche (Concept & Tunnel)
 add_card_shape(slide3, Inches(0.8), Inches(1.6), Inches(5.6), Inches(4.8))
 add_textbox(slide3, "🔗 AUTOMATION DES ADRESSES IP", Inches(1.1), Inches(1.9), Inches(5.0), Inches(0.4), font_size=12, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide3, "Mise à jour en temps réel des URLs", Inches(1.1), Inches(2.3), Inches(5.0), Inches(0.5), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -185,7 +185,7 @@ add_paragraph(tf_left, "✔ Capture automatique : Un script capture l'URL à la 
 add_paragraph(tf_left, "✔ Synchronisation globale : Injection automatique de l'URL dans les fichiers .env de l'application Owner et Tenant simultanément.", font_size=13, font_color=COLOR_GRAY)
 add_paragraph(tf_left, "✔ Zéro Friction : Les téléphones de test (iOS/Android) se connectent instantanément sans aucune configuration.", font_size=13, font_color=COLOR_GRAY)
 
-# Right Column (Network & Retry)
+# Colonne droite (Réseau & Tentatives)
 add_card_shape(slide3, Inches(6.8), Inches(1.6), Inches(5.6), Inches(4.8))
 add_textbox(slide3, "🛡️ RESILIENCE AUX TENTATIVES RÉSEAU", Inches(7.1), Inches(1.9), Inches(5.0), Inches(0.4), font_size=12, font_color=COLOR_ORANGE, bold=True)
 add_textbox(slide3, "Intercepteurs Globaux Axios & Retries", Inches(7.1), Inches(2.3), Inches(5.0), Inches(0.5), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -200,13 +200,13 @@ add_paragraph(tf_right, "✔ Gestionnaire de réessais (Retries) : Tentatives de
 add_paragraph(tf_right, "✔ Upload d'images blindé : Publication stable des annonces même avec des fichiers volumineux.", font_size=13, font_color=COLOR_GRAY)
 
 # ==============================================================================
-# SLIDE 4: THE REDESIGNED PREMIUM EXPLORER SCREEN (Visual Feature Showcase)
+# DIAPOSITIVE 4 : L'ÉCRAN D'EXPLORATION PREMIUM RECONÇU (Démonstration visuelle des fonctionnalités)
 # ==============================================================================
 slide4 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide4, COLOR_BG)
 add_slide_header(slide4, "L'Interface Explorer : Une Révolution Visuelle Moderne")
 
-# Left Side: Features List
+# Côté gauche : Liste des fonctionnalités
 add_card_shape(slide4, Inches(0.8), Inches(1.6), Inches(5.6), Inches(4.8))
 add_textbox(slide4, "🎨 EXPERIENCE PREMIUM WOW", Inches(1.1), Inches(1.8), Inches(5.0), Inches(0.4), font_size=12, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide4, "Fonctionnalités Clés Implémentées", Inches(1.1), Inches(2.2), Inches(5.0), Inches(0.5), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -221,14 +221,14 @@ add_paragraph(tf_feat, "• Recherche & Filtres intégrés : Barre de recherche 
 add_paragraph(tf_feat, "• Pills de sélection : Carrousel horizontal fluide (Tous, Appartement, Studio, Maison, Villa, Chambre) avec retour visuel actif bleu vif.", font_size=12, font_color=COLOR_GRAY)
 add_paragraph(tf_feat, "• Géolocalisation dynamique inversée : Localisation temps réel de l'utilisateur affichée dynamiquement (GPS vers Ville/Quartier).", font_size=12, font_color=COLOR_GRAY)
 
-# Right Side: Visual Mockup of the Premium Property Card
+# Côté droit : Maquette visuelle de la carte de propriété premium
 add_card_shape(slide4, Inches(6.8), Inches(1.6), Inches(5.6), Inches(4.8), bg_color=COLOR_WHITE)
-# Card Header / Image Area placeholder in Light Blue
+# En-tête de carte / Espace réservé pour l'image en bleu clair
 add_card_shape(slide4, Inches(7.1), Inches(1.9), Inches(5.0), Inches(2.2), bg_color=COLOR_LIGHT_BLUE, border_color=None)
-# Badge Coup de coeur inside mockup
+# Badge Coup de cœur dans la maquette
 add_card_shape(slide4, Inches(7.3), Inches(2.1), Inches(1.8), Inches(0.35), bg_color=COLOR_BLUE, border_color=None)
 add_textbox(slide4, "✦ Coup de cœur", Inches(7.3), Inches(2.12), Inches(1.8), Inches(0.35), font_size=9, font_color=COLOR_WHITE, bold=True, align=PP_ALIGN.CENTER)
-# Badge favorite heart inside mockup
+# Badge cœur de favori dans la maquette
 add_card_shape(slide4, Inches(11.3), Inches(2.1), Inches(0.5), Inches(0.5), bg_color=COLOR_WHITE, border_color=COLOR_BORDER)
 add_textbox(slide4, "❤️", Inches(11.3), Inches(2.15), Inches(0.5), Inches(0.5), font_size=11, align=PP_ALIGN.CENTER)
 # Photo counter
@@ -239,20 +239,20 @@ add_textbox(slide4, "📷 3", Inches(11.1), Inches(3.6), Inches(0.8), Inches(0.3
 add_textbox(slide4, "Appartement lumineux avec terrasse", Inches(7.1), Inches(4.3), Inches(3.6), Inches(0.3), font_size=13, font_color=COLOR_NAVY, bold=True)
 add_textbox(slide4, "⭐ 4.8", Inches(11.0), Inches(4.3), Inches(1.1), Inches(0.3), font_size=12, font_color=COLOR_ORANGE, bold=True, align=PP_ALIGN.RIGHT)
 add_textbox(slide4, "📍 Cocody · Abidjan", Inches(7.1), Inches(4.6), Inches(5.0), Inches(0.3), font_size=10, font_color=COLOR_GRAY)
-# Footer Divider Line
+# Ligne de séparation du pied de page
 add_card_shape(slide4, Inches(7.1), Inches(5.0), Inches(5.0), Inches(0.02), bg_color=COLOR_BORDER, border_color=None)
 # Specs
 add_textbox(slide4, "🛌 2 ch.   📐 65 m²", Inches(7.1), Inches(5.1), Inches(2.5), Inches(0.3), font_size=11, font_color=COLOR_GRAY, bold=True)
 add_textbox(slide4, "1 850 000 FCFA/mois", Inches(9.4), Inches(5.1), Inches(2.7), Inches(0.3), font_size=12, font_color=COLOR_BLUE, bold=True, align=PP_ALIGN.RIGHT)
 
 # ==============================================================================
-# SLIDE 5: OVERFLOW PROTECTION & STABILITY (Technical Layout)
+# DIAPOSITIVE 5 : PROTECTION CONTRE LE DÉBORDEMENT & STABILITÉ (Mise en page technique)
 # ==============================================================================
 slide5 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide5, COLOR_BG)
 add_slide_header(slide5, "Technique : Système Anti-Débordement de l'Interface")
 
-# 3 Pillars of Stability
+# Les 3 piliers de la stabilité
 add_card_shape(slide5, Inches(0.8), Inches(1.6), Inches(3.6), Inches(4.8))
 add_textbox(slide5, "1. FLEXWRAP DYNAMIQUE", Inches(1.1), Inches(1.9), Inches(3.0), Inches(0.4), font_size=12, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide5, "Adaptabilité aux Prix", Inches(1.1), Inches(2.3), Inches(3.0), Inches(0.5), font_size=17, font_color=COLOR_NAVY, bold=True)
@@ -287,13 +287,13 @@ add_paragraph(tf_stab3, "✔ Blocage du titre et de la localisation à 1 seule l
 add_paragraph(tf_stab3, "✔ Saisie modifiée pour forcer la séparation des blocs textuels au lieu des composants textes imbriqués bogués sous Android.", font_size=12, font_color=COLOR_GRAY)
 
 # ==============================================================================
-# SLIDE 6: AUTHENTICATION, VISITS & MODERATION (Summary Slide)
+# DIAPOSITIVE 6 : AUTHENTICATION, VISITES & MODÉRATION (Diapositive de résumé)
 # ==============================================================================
 slide6 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide6, COLOR_BG)
 add_slide_header(slide6, "Sécurité, Prises de Rendez-vous & Modération des Biens")
 
-# Left Card: Security & Auth
+# Carte gauche : Sécurité & Authentification
 add_card_shape(slide6, Inches(0.8), Inches(1.6), Inches(5.6), Inches(4.8))
 add_textbox(slide6, "🔒 PROTECTION DES DONNÉES", Inches(1.1), Inches(1.9), Inches(5.0), Inches(0.4), font_size=12, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide6, "Accès Limité & Comptes Suspendus", Inches(1.1), Inches(2.3), Inches(5.0), Inches(0.5), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -305,7 +305,7 @@ tf_sec.paragraphs[0].font.color.rgb = COLOR_GRAY
 add_paragraph(tf_sec, "• Modération active : Les locataires peuvent signaler une annonce douteuse en saisissant un motif détaillé via un KeyboardAvoidingView protecteur.", font_size=12, font_color=COLOR_GRAY)
 add_paragraph(tf_sec, "• Blocages instantanés : L'extension Prisma permet de marquer un compte comme SUSPENDED dans le panel d'administration. La connexion de ce dernier et ses requêtes sont immédiatement invalidées côté backend.", font_size=12, font_color=COLOR_GRAY)
 
-# Right Card: Real-Time Visits & Chat
+# Carte droite : Visites en temps réel & Chat
 add_card_shape(slide6, Inches(6.8), Inches(1.6), Inches(5.6), Inches(4.8))
 add_textbox(slide6, "📅 INTERACTION EN DIRECT", Inches(7.1), Inches(1.9), Inches(5.0), Inches(0.4), font_size=12, font_color=COLOR_ORANGE, bold=True)
 add_textbox(slide6, "Messagerie & Calendrier de Visites", Inches(7.1), Inches(2.3), Inches(5.0), Inches(0.5), font_size=18, font_color=COLOR_NAVY, bold=True)
@@ -318,15 +318,15 @@ add_paragraph(tf_vis, "• Système anti-doublon : Les demandes de visites redon
 add_paragraph(tf_vis, "• Messagerie Socket : Échange de messages cryptés et fluides entre le propriétaire et le locataire avec affichage des horaires et badges de notification non-lus sur l'onglet.", font_size=12, font_color=COLOR_GRAY)
 
 # ==============================================================================
-# SLIDE 7: SUMMARY & NEXT STEPS (Dark Navy Divider Theme)
+# DIAPOSITIVE 7 : RÉSUMÉ & PROCHAINES ÉTAPES (Thème séparateur bleu nuit)
 # ==============================================================================
 slide7 = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_background(slide7, COLOR_NAVY)
 
-# Large vertical accent line
+# Grande ligne d'accentuation verticale
 add_card_shape(slide7, Inches(0.8), Inches(1.8), Inches(0.15), Inches(4.0), bg_color=COLOR_ORANGE, border_color=None)
 
-# Left Side text box
+# Zone de texte du côté gauche
 add_textbox(slide7, "CONCLUSION & FUTURS HORIZONS", Inches(1.2), Inches(1.7), Inches(5.0), Inches(0.4), font_size=12, font_color=COLOR_BLUE, bold=True)
 add_textbox(slide7, "Bilan des Avancées", Inches(1.2), Inches(2.1), Inches(5.0), Inches(0.6), font_size=28, font_color=COLOR_WHITE, bold=True)
 
@@ -337,7 +337,7 @@ tf_sum.paragraphs[0].text = "L'application AttouHome dispose d'une infrastructur
 tf_sum.paragraphs[0].font.size = Pt(13)
 tf_sum.paragraphs[0].font.color.rgb = COLOR_GRAY
 
-# Right Side text box - Next Steps
+# Zone de texte côté droit - Prochaines étapes
 add_textbox(slide7, "PROCHAINES ÉTAPES DE PRODUCTION", Inches(6.8), Inches(1.7), Inches(5.5), Inches(0.4), font_size=12, font_color=COLOR_ORANGE, bold=True)
 add_textbox(slide7, "Chantiers Prioritaires", Inches(6.8), Inches(2.1), Inches(5.5), Inches(0.6), font_size=28, font_color=COLOR_WHITE, bold=True)
 
@@ -350,6 +350,6 @@ tf_steps.paragraphs[0].font.color.rgb = COLOR_GRAY
 add_paragraph(tf_steps, "2. Déploiement Cloud Production : Migration de la base PostgreSQL locale et du backend vers AWS/Heroku pour s'affranchir définitivement des tunnels de dev.", font_size=13, font_color=COLOR_GRAY)
 add_paragraph(tf_steps, "3. Build natif de test : Exportation des fichiers IPA (iOS) et APK (Android) via EAS Build d'Expo pour distribution aux bêta-testeurs.", font_size=13, font_color=COLOR_GRAY)
 
-# Save the beautifully crafted presentation
+# Sauvegarder la présentation
 prs.save("AttouHome_Rapport_Developpement.pptx")
 print("Presentation successfully created as AttouHome_Rapport_Developpement.pptx!")

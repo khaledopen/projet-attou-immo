@@ -48,7 +48,7 @@ const rl = readline.createInterface({
 const moveDirectories = async (userInput) => {
   try {
     if (userInput === "y") {
-      // Create the app-example directory
+      // Créer le répertoire app-example
       await fs.promises.mkdir(exampleDirPath, { recursive: true });
       console.log(`📁 /${exampleDir} directory created.`);
     }
@@ -70,17 +70,17 @@ const moveDirectories = async (userInput) => {
       }
     }
 
-    // Create new /app directory
+    // Créer le nouveau répertoire /app
     const newAppDirPath = path.join(root, newAppDir);
     await fs.promises.mkdir(newAppDirPath, { recursive: true });
     console.log("\n📁 New /app directory created.");
 
-    // Create index.tsx
+    // Créer index.tsx
     const indexPath = path.join(newAppDirPath, "index.tsx");
     await fs.promises.writeFile(indexPath, indexContent);
     console.log("📄 app/index.tsx created.");
 
-    // Create _layout.tsx
+    // Créer _layout.tsx
     const layoutPath = path.join(newAppDirPath, "_layout.tsx");
     await fs.promises.writeFile(layoutPath, layoutContent);
     console.log("📄 app/_layout.tsx created.");

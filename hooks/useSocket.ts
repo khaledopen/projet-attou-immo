@@ -13,7 +13,11 @@ export const useSocket = () => {
 
       const user = JSON.parse(userStr);
       const newSocket = io(SOCKET_URL, {
-        transports: ['websocket']
+        transports: ['polling', 'websocket'],
+        extraHeaders: {
+          'ngrok-skip-browser-warning': 'true',
+          'bypass-tunnel-reminder': 'true',
+        }
       });
 
       newSocket.on('connect', () => {

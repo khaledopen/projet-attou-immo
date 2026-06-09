@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../api/config';
+import api from '../api/axiosInstance';
 
 export default function NotificationsModal() {
   const router = useRouter();
@@ -18,12 +17,11 @@ export default function NotificationsModal() {
         setLoading(false);
         return;
       }
-      const headers = { Authorization: `Bearer ${token}` };
-      const res = await axios.get(`${BASE_URL}/notifications`, { headers });
+      const res = await api.get('/notifications');
       setNotifications(res.data);
 
-      // Automatically mark all as read when opening notifications
-      await axios.patch(`${BASE_URL}/notifications/read-all`, {}, { headers });
+      // Marquer automatiquement toutes les notifications comme lues à l'ouverture
+      await api.patch('/notifications/read-all');
     } catch (err) {
       console.error('Erreur chargement notifications:', err);
     } finally {
@@ -144,18 +142,22 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 4,
+    gap: 8,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: '#1e293b',
+    flex: 1,
   },
   timeText: {
     fontSize: 10,
     color: '#94a3b8',
     fontWeight: '500',
+    minWidth: 40,
+    textAlign: 'right',
   },
   cardContent: {
     fontSize: 13,

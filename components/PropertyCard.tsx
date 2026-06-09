@@ -34,12 +34,12 @@ export default function PropertyCard({ property, isFavorite = false, onToggleFav
           resizeMode="cover"
         />
         
-        {/* Floating Coup de Cœur badge */}
+        {/* Badge Coup de Cœur flottant */}
         <View style={styles.badgeCoupDeCoeur}>
           <Text style={styles.badgeCoupDeCoeurText}>✦ Coup de cœur</Text>
         </View>
 
-        {/* Floating Favorite heart button */}
+        {/* Bouton favori cœur flottant */}
         {onToggleFavorite && (
           <TouchableOpacity 
             style={styles.favoriteButton} 
@@ -57,7 +57,7 @@ export default function PropertyCard({ property, isFavorite = false, onToggleFav
           </TouchableOpacity>
         )}
 
-        {/* Floating Image Count badge */}
+        {/* Badge flottant du nombre d'images */}
         <View style={styles.imageCountBadge}>
           <Ionicons name="camera-outline" size={12} color="#fff" style={{ marginRight: 3 }} />
           <Text style={styles.imageCountText}>{property.photosCount || 1}</Text>

@@ -41,8 +41,11 @@ export default function OAuthCallbackScreen() {
           email: googleEmail,
           password: googlePassword,
         });
-        const { token, user } = loginRes.data;
+        const { token, refreshToken, user } = loginRes.data;
         await AsyncStorage.setItem('userToken', token);
+        if (refreshToken) {
+          await AsyncStorage.setItem('refreshToken', refreshToken);
+        }
         await AsyncStorage.setItem('userData', JSON.stringify(user));
         Alert.alert('Connexion réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
         router.replace('/(tabs)');
@@ -64,8 +67,11 @@ export default function OAuthCallbackScreen() {
             email: googleEmail,
             password: googlePassword,
           });
-          const { token, user } = loginRes.data;
+          const { token, refreshToken: regRefreshToken, user } = loginRes.data;
           await AsyncStorage.setItem('userToken', token);
+          if (regRefreshToken) {
+            await AsyncStorage.setItem('refreshToken', regRefreshToken);
+          }
           await AsyncStorage.setItem('userData', JSON.stringify(user));
           Alert.alert('Inscription réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
           router.replace('/(tabs)');

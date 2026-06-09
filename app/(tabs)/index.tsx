@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, TextInput, Platform, Keyboard, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../api/axiosInstance';
 import { BASE_URL } from '../../api/config';
 import PropertyCard from '../../components/PropertyCard';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSocket } from '../../hooks/useSocket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { playNotificationSound } from '../../utils/notificationSound';
 
 const ExplorerScreen = () => {
   const [properties, setProperties] = useState([]);
@@ -23,6 +24,9 @@ const ExplorerScreen = () => {
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Tous');
   const [favorites, setFavorites] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
 
   const requestLocationPermission = async () => {
     try {
@@ -123,12 +127,17 @@ const ExplorerScreen = () => {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchProperties();
+      fetchUnreadNotifications();
+      checkAuthStatus();
+      loadFavorites();
+    }, [])
+  );
+
   useEffect(() => {
-    fetchProperties();
-    fetchUnreadNotifications();
-    checkAuthStatus();
     requestLocationPermission();
-    loadFavorites();
   }, []);
 
   useEffect(() => {
@@ -144,11 +153,13 @@ const ExplorerScreen = () => {
     if (socket) {
       const handleRealtimeUpdate = () => {
         console.log('Realtime update received via socket, refreshing listings...');
+        playNotificationSound();
         fetchProperties();
       };
       
       const handleNotificationUpdate = () => {
         console.log('New notification socket event, refreshing unread count...');
+        playNotificationSound();
         fetchUnreadNotifications();
       };
       
@@ -198,6 +209,18 @@ const ExplorerScreen = () => {
       }
     }
 
+    // Min Price Filter
+    if (minPrice) {
+      const minVal = parseFloat(minPrice);
+      if (!isNaN(minVal) && item.prix < minVal) return false;
+    }
+
+    // Max Price Filter
+    if (maxPrice) {
+      const maxVal = parseFloat(maxPrice);
+      if (!isNaN(maxVal) && item.prix > maxVal) return false;
+    }
+
     // Search Query
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
@@ -210,6 +233,8 @@ const ExplorerScreen = () => {
     
     return titreMatch || typeMatch || villeMatch || rueMatch || priceMatch;
   });
+
+  const hasActiveFilters = minPrice !== '' || maxPrice !== '';
 
   if (loading) {
     return (
@@ -249,8 +274,8 @@ const ExplorerScreen = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-          <TouchableOpacity style={styles.filterButton} activeOpacity={0.8}>
-            <Ionicons name="options-outline" size={22} color="#0284c7" />
+          <TouchableOpacity style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]} activeOpacity={0.8} onPress={() => setShowFilterModal(true)}>
+            <Ionicons name="options-outline" size={22} color={hasActiveFilters ? '#fff' : '#0284c7'} />
           </TouchableOpacity>
         </View>
 
@@ -360,6 +385,71 @@ const ExplorerScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Price Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => { Keyboard.dismiss(); }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ width: '100%', justifyContent: 'flex-end' }}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <View style={styles.modalSheet}>
+                <View style={styles.modalIndicator} />
+                <Text style={styles.modalTitle}>Filtrer par prix 💰</Text>
+                <Text style={styles.modalSubtitle}>Définissez une fourchette de prix (FCFA / mois)</Text>
+
+                <View style={styles.priceRow}>
+                  <View style={styles.priceInputGroup}>
+                    <Text style={styles.priceLabel}>Min</Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      placeholder="0"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="numeric"
+                      value={minPrice}
+                      onChangeText={setMinPrice}
+                      returnKeyType="done"
+                      onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                  </View>
+                  <Text style={styles.priceSeparator}>—</Text>
+                  <View style={styles.priceInputGroup}>
+                    <Text style={styles.priceLabel}>Max</Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      placeholder="∞"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="numeric"
+                      value={maxPrice}
+                      onChangeText={setMaxPrice}
+                      returnKeyType="done"
+                      onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.modalPrimaryBtn} onPress={() => { Keyboard.dismiss(); setShowFilterModal(false); }}>
+                  <Text style={styles.modalPrimaryBtnText}>Appliquer les filtres</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.modalSecondaryBtn} onPress={() => { Keyboard.dismiss(); setMinPrice(''); setMaxPrice(''); setShowFilterModal(false); }}>
+                  <Text style={styles.modalSecondaryBtnText}>Réinitialiser</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -402,7 +492,13 @@ const styles = StyleSheet.create({
   modalSecondaryBtn: { backgroundColor: '#fff', width: '100%', paddingVertical: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#e2e8f0', marginBottom: 15 },
   modalSecondaryBtnText: { color: '#0f172a', fontSize: 16, fontWeight: 'bold' },
   modalCloseBtn: { paddingVertical: 10 },
-  modalCloseBtnText: { color: '#94a3b8', fontSize: 14, fontWeight: '600' }
+  modalCloseBtnText: { color: '#94a3b8', fontSize: 14, fontWeight: '600' },
+  filterButtonActive: { backgroundColor: '#0284c7' },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 25, width: '100%' },
+  priceInputGroup: { flex: 1 },
+  priceLabel: { fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 },
+  priceInput: { backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#0f172a', textAlign: 'center' },
+  priceSeparator: { fontSize: 18, color: '#cbd5e1', fontWeight: '700', marginTop: 18 }
 });
 
 export default ExplorerScreen;

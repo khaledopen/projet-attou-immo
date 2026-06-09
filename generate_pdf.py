@@ -8,7 +8,7 @@ from reportlab.graphics.shapes import Drawing, Rect, String, Line, Circle, Group
 from reportlab.pdfgen import canvas
 
 class NumberedCanvas(canvas.Canvas):
-    """Custom canvas to handle two-pass page numbering and professional footer/header."""
+    """Canevas personnalisé pour gérer la numérotation des pages en deux étapes et l'en-tête/pied de page professionnel."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
@@ -28,12 +28,12 @@ class NumberedCanvas(canvas.Canvas):
     def draw_page_decorations(self, page_count):
         self.saveState()
         
-        # Don't draw headers/footers on page 1 (Cover Page)
+        # Ne pas dessiner d'en-tête/pied de page sur la page 1 (Page de couverture)
         if self._pageNumber == 1:
             self.restoreState()
             return
 
-        # Determine page size and orientation
+        # Déterminer la taille et l'orientation de la page
         width, height = self._pagesize
         
         # Header (Top of the page)
@@ -57,20 +57,20 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 def create_diagram_drawing():
-    """Generates the main visual entity relationship class diagram in a ReportLab Drawing."""
-    # Custom landscape area: 720 wide, 400 high
+    """Génère le diagramme de classes de relation d'entité visuel principal dans un dessin ReportLab."""
+    # Zone de paysage personnalisée : 720 de large, 400 de haut
     d = Drawing(720, 420)
     
-    # 1. Background area
+    # 1. Zone d'arrière-plan
     d.add(Rect(0, 0, 720, 420, fillColor=colors.HexColor('#F8FAFC'), strokeColor=colors.HexColor('#E2E8F0'), rx=10, ry=10))
     
-    # 2. Draw Relations (Lines and labels)
+    # 2. Dessiner les relations (lignes et étiquettes)
     def draw_rel(x1, y1, x2, y2, label="", card1="", card2=""):
         d.add(Line(x1, y1, x2, y2, strokeColor=colors.HexColor('#0284C7'), strokeWidth=1.5))
-        # Draw connector anchors
+        # Dessiner les ancrages de connecteurs
         d.add(Circle(x1, y1, 3, fillColor=colors.HexColor('#0F172A'), strokeColor=None))
         d.add(Circle(x2, y2, 3, fillColor=colors.HexColor('#0F172A'), strokeColor=None))
-        # Labels and Cardinalities
+        # Étiquettes et cardinalités
         mid_x = (x1 + x2) / 2
         mid_y = (y1 + y2) / 2
         if label:
@@ -80,7 +80,7 @@ def create_diagram_drawing():
         if card2:
             d.add(String(x2 + (-12 if x2 > x1 else 12 if x2 < x1 else 0), y2 + (-12 if y2 > y1 else 8 if y2 < y1 else 4), card2, fontName='Helvetica-Bold', fontSize=7, fillColor=colors.HexColor('#64748B'), textAnchor='middle'))
 
-    # Draw connection lines
+    # Dessiner les lignes de connexion
     # User ➔ Annonce
     draw_rel(170, 335, 270, 335, "publie", "1..1", "0..*")
     # Annonce ➔ Bien
@@ -91,7 +91,7 @@ def create_diagram_drawing():
     draw_rel(340, 290, 340, 220, "contient", "1..1", "0..*")
     # User ➔ DemandeVisite
     draw_rel(95, 290, 95, 220, "effectue", "1..1", "0..*")
-    # Annonce ➔ DemandeVisite (angled)
+    # Annonce ➔ DemandeVisite (incliné)
     draw_rel(300, 290, 170, 185, "reçoit", "1..1", "0..*")
     # User ➔ Notification
     draw_rel(120, 290, 510, 60, "reçoit", "1..1", "0..*")
@@ -100,26 +100,26 @@ def create_diagram_drawing():
     # Conversation ➔ Message
     draw_rel(170, 60, 270, 60, "contient", "1..1", "0..*")
 
-    # Helper to draw beautiful modern rounded cards
+    # Fonction d'aide pour dessiner de belles cartes arrondies modernes
     def draw_class_box(name, x, y, width, height, fields):
-        # Header rounded block
+        # Bloc arrondi de l'en-tête
         d.add(Rect(x, y + height - 20, width, 20, fillColor=colors.HexColor('#0F172A'), strokeColor=None, rx=4, ry=4))
-        d.add(Rect(x, y + height - 20, width, 8, fillColor=colors.HexColor('#0F172A'), strokeColor=None)) # Cover bottom corners of header
+        d.add(Rect(x, y + height - 20, width, 8, fillColor=colors.HexColor('#0F172A'), strokeColor=None)) # Couvrir les coins inférieurs de l'en-tête
         
-        # Body rounded block
+        # Bloc de corps arrondi
         d.add(Rect(x, y, width, height - 16, fillColor=colors.HexColor('#FFFFFF'), strokeColor=colors.HexColor('#CBD5E1'), rx=4, ry=4))
         
-        # Class title text
+        # Texte de titre de classe
         d.add(String(x + width/2, y + height - 14, name.upper(), fontName='Helvetica-Bold', fontSize=9, fillColor=colors.HexColor('#FFFFFF'), textAnchor='middle'))
         
-        # Class attributes listing
+        # Liste des attributs de classe
         curr_y = y + height - 32
         for field in fields:
             d.add(String(x + 8, curr_y, field, fontName='Helvetica', fontSize=7, fillColor=colors.HexColor('#334155')))
             curr_y -= 10
 
-    # Layout coordinate configurations
-    # Row 3 (Top row - y=290)
+    # Configurations des coordonnées de mise en page
+    # Rangée 3 (Rangée supérieure - y=290)
     draw_class_box("User", 20, 290, 150, 115, [
         "+ id : String [PK]",
         "+ nom : String",
@@ -146,7 +146,7 @@ def create_diagram_drawing():
         "+ adresseId [FK]"
     ])
 
-    # Row 2 (Middle row - y=150)
+    # Rangée 2 (Rangée du milieu - y=150)
     draw_class_box("DemandeVisite", 20, 150, 150, 70, [
         "+ id : String [PK]",
         "+ dateProposee : DateTime",
@@ -168,7 +168,7 @@ def create_diagram_drawing():
         "+ pays : String"
     ])
 
-    # Row 1 (Bottom row - y=20)
+    # Rangée 1 (Rangée inférieure - y=20)
     draw_class_box("Conversation", 20, 20, 150, 80, [
         "+ id : String [PK]",
         "+ locataireId [FK]",
@@ -193,7 +193,7 @@ def create_diagram_drawing():
     return d
 
 def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
-    # Target Landscape layout (11 x 8.5 inches = 792 x 612 pt)
+    # Mise en page paysage cible (11 x 8.5 pouces = 792 x 612 pt)
     doc = SimpleDocTemplate(
         filename,
         pagesize=landscape(letter),
@@ -265,7 +265,7 @@ def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
     story = []
 
     # ==========================================================================
-    # PAGE 1: TITLE/COVER PAGE (Landscape style layout)
+    # PAGE 1 : PAGE DE COUVERTURE (Mise en page de style paysage)
     # ==========================================================================
     story.append(Spacer(1, 80))
     story.append(Paragraph("ATTOUHOME", style_cover_title))
@@ -273,7 +273,7 @@ def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
     
     story.append(Spacer(1, 40))
     
-    # Abstract summary inside a light gray box table
+    # Résumé abstrait dans un tableau à fond gris clair
     summary_text = (
         "<b>Rapport Technique Complet de l'Infrastructure PostgreSQL & Prisma.</b><br/>"
         "Ce rapport présente le diagramme de classes logique, les relations de tables "
@@ -298,7 +298,7 @@ def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
     story.append(PageBreak())
 
     # ==========================================================================
-    # PAGE 2: THE ER CLASS DIAGRAM (Drawing Canvas Showcase)
+    # PAGE 2 : DIAGRAMME DE CLASSES ER (Démonstration du canevas de dessin)
     # ==========================================================================
     story.append(Paragraph("1. Diagramme Entité-Relation Logique (Conception)", style_h1))
     story.append(Paragraph(
@@ -313,7 +313,7 @@ def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
     story.append(PageBreak())
 
     # ==========================================================================
-    # PAGE 3: TABLES SPECIFICATIONS REFERENCE (Data Dictionary)
+    # PAGE 3 : RÉFÉRENCE DES SPÉCIFICATIONS DES TABLES (Dictionnaire de données)
     # ==========================================================================
     story.append(Paragraph("2. Dictionnaire de Données Référentiel", style_h1))
     story.append(Paragraph(
@@ -323,7 +323,7 @@ def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
     ))
     story.append(Spacer(1, 15))
 
-    # Data dictionary table rows
+    # Lignes du tableau du dictionnaire de données
     data_dict = [
         [
             Paragraph("<b>Table</b>", style_table_header),
@@ -432,7 +432,7 @@ def build_pdf_report(filename="AttouHome_Schema_BD.pdf"):
     
     story.append(t)
 
-    # Build the document using the Custom Numbered Canvas
+    # Construire le document en utilisant le canevas numéroté personnalisé
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"Technical PDF document successfully built as {filename}!")
 

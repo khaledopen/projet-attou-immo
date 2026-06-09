@@ -4,7 +4,7 @@ import {
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
   Alert, Image
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +19,7 @@ const GOOGLE_CLIENT_ID_WEB = '57003195747-e1denhbqp169eucbkjjsoq2jvmqruhlk.apps.
 
 const RegisterScreen = () => {
   const router = useRouter();
+  const { redirectTo } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -55,7 +56,11 @@ const RegisterScreen = () => {
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(user));
         Alert.alert('Connexion Google réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-        router.replace('/(tabs)');
+        if (redirectTo) {
+          router.replace(redirectTo as any);
+        } else {
+          router.replace('/(tabs)');
+        }
       } catch (loginErr: any) {
         console.log('[Google] User not found, registering…');
         // Nouveau compte → inscription automatique
@@ -79,7 +84,11 @@ const RegisterScreen = () => {
           await AsyncStorage.setItem('userToken', token);
           await AsyncStorage.setItem('userData', JSON.stringify(user));
           Alert.alert('Inscription Google réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-          router.replace('/(tabs)');
+          if (redirectTo) {
+            router.replace(redirectTo as any);
+          } else {
+            router.replace('/(tabs)');
+          }
         } catch (regErr: any) {
           console.log('[Google] Register failed:', regErr?.response?.data || regErr?.message);
           const errMsg = regErr.response?.data?.message || regErr.message || '';
@@ -118,7 +127,11 @@ const RegisterScreen = () => {
       await AsyncStorage.setItem('userToken', data.token);
       await AsyncStorage.setItem('userData', JSON.stringify(data.user));
       // Redirection directe sans repasser par login
-      router.replace('/(tabs)');
+      if (redirectTo) {
+        router.replace(redirectTo as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       console.error('Register error:', error);
       let msg = 'Problème de connexion au serveur.';

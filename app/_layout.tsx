@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Stack, useRouter } from 'expo-router';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
 import io from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SOCKET_URL } from '../api/config';
 import axios from 'axios';
+import { playNotificationSound } from '../utils/notificationSound';
 
 axios.defaults.timeout = 30000;
 axios.defaults.headers.common['bypass-tunnel-reminder'] = 'true';
@@ -59,21 +60,35 @@ axios.interceptors.response.use(
 );
 
 export default function RootLayout() {
+  const router = useRouter();
+  const lastActive = useRef(Date.now());
+
+  const updateActivity = () => {
+    lastActive.current = Date.now();
+  };
+
   useEffect(() => {
-    let socket;
+    let socket: any;
 
     const setupSocket = async () => {
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const user = JSON.parse(userData);
-        socket = io(SOCKET_URL);
+        socket = io(SOCKET_URL, {
+          transports: ['polling', 'websocket'],
+          extraHeaders: {
+            'ngrok-skip-browser-warning': 'true',
+            'bypass-tunnel-reminder': 'true',
+          }
+        });
 
         socket.on('connect', () => {
           console.log('Connected to socket server');
           socket.emit('join', user.id);
         });
 
-        socket.on('notification', (notif) => {
+        socket.on('notification', (notif: any) => {
+          playNotificationSound();
           Alert.alert(notif.title, notif.message);
         });
       }
@@ -81,19 +96,46 @@ export default function RootLayout() {
 
     setupSocket();
 
+    // Vérifier l'inactivité toutes les 5 secondes
+    const inactivityInterval = setInterval(async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        const timeSinceActive = Date.now() - lastActive.current;
+        if (timeSinceActive > 3600000) { // 1 heure d'inactivité
+          console.log('[Inactivity] Déconnexion automatique après 1 heure.');
+          await AsyncStorage.multiRemove(['userToken', 'userData', 'refreshToken']);
+          Alert.alert('Inactivité', 'Vous avez été déconnecté après 1 heure d\'inactivité.');
+          router.replace('/login');
+        }
+      } else {
+        // Keeps user activity updated even when not logged in
+        lastActive.current = Date.now();
+      }
+    }, 5000);
+
     return () => {
       if (socket) socket.disconnect();
+      clearInterval(inactivityInterval);
     };
-  }, []);
+  }, [router]);
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="property/[id]" options={{ presentation: 'card' }} />
-      </Stack>
+      <View 
+        style={{ flex: 1 }} 
+        onStartShouldSetResponderCapture={() => {
+          updateActivity();
+          return false;
+        }}
+      >
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="property/[id]" options={{ presentation: 'card' }} />
+        </Stack>
+      </View>
     </ThemeProvider>
   );
 }

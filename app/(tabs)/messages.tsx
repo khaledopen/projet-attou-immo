@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { BASE_URL, SOCKET_URL } from '../../api/config';
+import { SOCKET_URL } from '../../api/config';
+import api from '../../api/axiosInstance';
 import { io } from 'socket.io-client';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { playMessageSound } from '../../utils/notificationSound';
 
 export default function MessagesScreen() {
   const [conversations, setConversations] = useState([]);
@@ -23,9 +24,7 @@ export default function MessagesScreen() {
         return;
       }
       setIsLoggedIn(true);
-      const res = await axios.get(`${BASE_URL}/messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/messages/conversations');
       setConversations(res.data);
     } catch (error) {
       console.error(error);
@@ -54,12 +53,17 @@ export default function MessagesScreen() {
         if (userStr && active) {
           const user = JSON.parse(userStr);
           socketRef.current = io(SOCKET_URL, {
-            transports: ['websocket']
+            transports: ['polling', 'websocket'],
+            extraHeaders: {
+              'ngrok-skip-browser-warning': 'true',
+              'bypass-tunnel-reminder': 'true',
+            }
           });
           socketRef.current.emit('join', user.id);
 
           socketRef.current.on('nouveau_message', (msg) => {
             if (active) {
+              playMessageSound();
               fetchConversations();
             }
           });
@@ -97,10 +101,10 @@ export default function MessagesScreen() {
             Connectez-vous ou créez un compte gratuitement en quelques secondes pour chatter en temps réel avec les propriétaires.
           </Text>
           
-          <TouchableOpacity style={styles.unauthBtn} onPress={() => router.push('/login')}>
+          <TouchableOpacity style={styles.unauthBtn} onPress={() => router.push({ pathname: '/login', params: { redirectTo: '/(tabs)/messages' } })}>
             <Text style={styles.unauthBtnText}>Se connecter</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.unauthSecondaryBtn} onPress={() => router.push('/register')}>
+          <TouchableOpacity style={styles.unauthSecondaryBtn} onPress={() => router.push({ pathname: '/register', params: { redirectTo: '/(tabs)/messages' } })}>
             <Text style={styles.unauthSecondaryBtnText}>S'inscrire</Text>
           </TouchableOpacity>
         </View>
@@ -110,7 +114,18 @@ export default function MessagesScreen() {
 
   const renderItem = ({ item }) => {
     const interlocuteur = item.proprietaire;
-    const lastMessage = item.messages?.[0]?.contenu || 'Nouvelle conversation';
+    let lastMessage = item.messages?.[0]?.contenu || 'Nouvelle conversation';
+
+    if (lastMessage.startsWith('SYSTEM_PENDING|')) {
+      const parts = lastMessage.split('|');
+      lastMessage = `Visite en attente de réponse : ${parts[1]}`;
+    } else if (lastMessage.startsWith('SYSTEM_ACCEPTED|')) {
+      const parts = lastMessage.split('|');
+      lastMessage = `Visite acceptée ! : ${parts[1]}`;
+    } else if (lastMessage.startsWith('SYSTEM_REFUSED|')) {
+      const parts = lastMessage.split('|');
+      lastMessage = `Visite refusée : ${parts[1]}`;
+    }
 
     return (
       <TouchableOpacity 
@@ -122,7 +137,22 @@ export default function MessagesScreen() {
         </View>
         <View style={styles.convInfo}>
           <Text style={styles.name}>{interlocuteur.prenom} {interlocuteur.nom}</Text>
-          <Text style={styles.property}>{item.annonce?.titre}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+            <Text style={styles.property} numberOfLines={1}>{item.annonce?.titre}</Text>
+            {item.statutVisite && (
+              <View style={[
+                styles.miniBadge,
+                item.statutVisite === 'ACCEPTEE' ? styles.badgeSuccess : (item.statutVisite === 'REFUSEE' ? styles.badgeDanger : styles.badgePending)
+              ]}>
+                <Text style={[
+                  styles.miniBadgeText,
+                  item.statutVisite === 'ACCEPTEE' ? styles.badgeTextSuccess : (item.statutVisite === 'REFUSEE' ? styles.badgeTextDanger : styles.badgeTextPending)
+                ]}>
+                  {item.statutVisite === 'ACCEPTEE' ? 'Acceptée' : (item.statutVisite === 'REFUSEE' ? 'Refusée' : 'En attente')}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.lastMessage} numberOfLines={1}>{lastMessage}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
@@ -160,7 +190,15 @@ const styles = StyleSheet.create({
   avatarText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   convInfo: { flex: 1 },
   name: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
-  property: { fontSize: 12, color: '#0ea5e9', marginBottom: 5 },
+  property: { fontSize: 12, color: '#0ea5e9', flexShrink: 1 },
+  miniBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 6 },
+  badgeSuccess: { backgroundColor: '#dcfce7' },
+  badgeDanger: { backgroundColor: '#fee2e2' },
+  badgePending: { backgroundColor: '#fff7ed' },
+  miniBadgeText: { fontSize: 10, fontWeight: '700' },
+  badgeTextSuccess: { color: '#15803d' },
+  badgeTextDanger: { color: '#ef4444' },
+  badgeTextPending: { color: '#c2410c' },
   lastMessage: { fontSize: 14, color: '#64748b' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
   emptyText: { marginTop: 15, color: '#64748b', fontSize: 16 },

@@ -116,7 +116,13 @@ const PropertyDetails = () => {
     if (!token) {
       Alert.alert('Connexion requise', 'Veuillez vous connecter pour signaler cette annonce.', [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Se connecter', onPress: () => router.push('/login') }
+        { 
+          text: 'Se connecter', 
+          onPress: () => router.push({ 
+            pathname: '/login', 
+            params: { redirectTo: `/property/${id}` } 
+          }) 
+        }
       ]);
       return;
     }
@@ -142,7 +148,13 @@ const PropertyDetails = () => {
     if (!token) {
       Alert.alert('Connexion requise', 'Veuillez vous connecter pour demander une visite.', [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Se connecter', onPress: () => router.push('/login') }
+        { 
+          text: 'Se connecter', 
+          onPress: () => router.push({ 
+            pathname: '/login', 
+            params: { redirectTo: `/property/${id}` } 
+          }) 
+        }
       ]);
       return;
     }
@@ -301,19 +313,8 @@ const PropertyDetails = () => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.requestButton}
-          onPress={handleRequestVisitPress}
-          disabled={requesting}
-        >
-          {requesting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="calendar" size={20} color="#fff" style={{ marginRight: 10 }} />
-              <Text style={styles.requestButtonText}>Demander une visite</Text>
-            </>
-          )}
+        <TouchableOpacity style={styles.requestButton} onPress={handleRequestVisitPress}>
+          <Text style={styles.requestButtonText}>Demander une visite</Text>
         </TouchableOpacity>
       </View>
 
@@ -455,6 +456,8 @@ const styles = StyleSheet.create({
   footer: { padding: 25, borderTopWidth: 1, borderColor: '#f1f5f9' },
   requestButton: { backgroundColor: '#0ea5e9', padding: 20, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#0ea5e9', shadowOpacity: 0.3, shadowRadius: 15, elevation: 5 },
   requestButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  disabledVisitContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fffbeb', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fde68a' },
+  disabledVisitText: { flex: 1, color: '#92400e', fontSize: 14, fontWeight: '600', lineHeight: 20 },
   paginationDots: { position: 'absolute', bottom: 15, flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.5)', marginHorizontal: 4 },
   activeDot: { backgroundColor: '#fff', width: 12, height: 12, borderRadius: 6 },
