@@ -3,7 +3,9 @@ const {
   requestVisit, 
   getTenantVisits, 
   getOwnerVisits, 
-  updateVisitStatus 
+  updateVisitStatus,
+  cancelVisit,
+  updateVisitDate
 } = require('../controllers/visitController');
 const { protect } = require('../middleware/authMiddleware');
 const router = express.Router();
@@ -73,6 +75,39 @@ router.get('/owner', protect, getOwnerVisits);
  *   patch:
  *     summary: Changer le statut d'une visite
  *     tags: [Visits]
+ */
+router.patch('/:id/status', protect, updateVisitStatus);
+
+/**
+ * @swagger
+ * /api/visits/{id}/cancel:
+ *   patch:
+ *     summary: Annuler une demande de visite (locataire uniquement, statut EN_ATTENTE)
+ *     tags: [Visits]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Demande annulée avec succès
+ *       400:
+ *         description: La demande n'est pas en attente
+ *       403:
+ *         description: Non autorisé
+ */
+router.patch('/:id/cancel', protect, cancelVisit);
+
+/**
+ * @swagger
+ * /api/visits/{id}/date:
+ *   patch:
+ *     summary: Modifier la date proposée d'une visite (locataire, statut EN_ATTENTE uniquement)
+ *     tags: [Visits]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -88,15 +123,17 @@ router.get('/owner', protect, getOwnerVisits);
  *           schema:
  *             type: object
  *             required:
- *               - statut
+ *               - dateProposee
  *             properties:
- *               statut:
+ *               dateProposee:
  *                 type: string
- *                 enum: [ACCEPTEE, REFUSEE, ANNULEE]
+ *                 format: date-time
  *     responses:
  *       200:
- *         description: Statut mis à jour
+ *         description: Date mise à jour
+ *       400:
+ *         description: La demande n'est pas en attente
  */
-router.patch('/:id/status', protect, updateVisitStatus);
+router.patch('/:id/date', protect, updateVisitDate);
 
 module.exports = router;

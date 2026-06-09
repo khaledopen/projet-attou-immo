@@ -5,15 +5,13 @@ exports.getConversations = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    let whereClause = {};
-    if (userRole === 'PROPRIETAIRE') {
-      whereClause.proprietaireId = userId;
-    } else {
-      whereClause.locataireId = userId;
-    }
-
     const conversations = await prisma.conversation.findMany({
-      where: whereClause,
+      where: {
+        OR: [
+          { locataireId: userId },
+          { proprietaireId: userId }
+        ]
+      },
       include: {
         locataire: { select: { id: true, nom: true, prenom: true } },
         proprietaire: { select: { id: true, nom: true, prenom: true } },
@@ -26,7 +24,34 @@ exports.getConversations = async (req, res) => {
       orderBy: { dateMiseAJour: 'desc' }
     });
 
-    res.json(conversations);
+    const conversationsWithStatus = await Promise.all(
+      conversations.map(async (conv) => {
+        if (conv.annonceId) {
+          const visite = await prisma.demandeVisite.findFirst({
+            where: {
+              locataireId: conv.locataireId,
+              annonceId: conv.annonceId
+            },
+            select: { statut: true }
+          });
+          return {
+            ...conv,
+            statutVisite: visite ? visite.statut : null
+          };
+        }
+        return { ...conv, statutVisite: null };
+      })
+    );
+
+    // Filtrer les conversations pour masquer celles qui sont refusées si l'utilisateur actuel est le propriétaire
+    const filteredConversations = conversationsWithStatus.filter(conv => {
+      if (conv.proprietaireId === userId && conv.statutVisite === 'REFUSEE') {
+        return false;
+      }
+      return true;
+    });
+
+    res.json(filteredConversations);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
@@ -47,7 +72,7 @@ exports.getMessages = async (req, res) => {
     }
 
     // Marquer les messages de l'autre comme lus
-    await prisma.message.updateMany({
+    const updateResult = await prisma.message.updateMany({
       where: {
         conversationId,
         expediteurId: { not: req.user.id },
@@ -55,6 +80,10 @@ exports.getMessages = async (req, res) => {
       },
       data: { lu: true }
     });
+
+    if (updateResult.count > 0 && req.io) {
+      req.io.to(`user_${req.user.id}`).emit('unread_count_update');
+    }
 
     const messages = await prisma.message.findMany({
       where: { conversationId },
@@ -72,16 +101,13 @@ exports.getUnreadCount = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Trouver toutes les conversations de l'utilisateur
-    let whereClause = {};
-    if (userRole === 'PROPRIETAIRE') {
-      whereClause.proprietaireId = userId;
-    } else {
-      whereClause.locataireId = userId;
-    }
-
     const conversations = await prisma.conversation.findMany({
-      where: whereClause,
+      where: {
+        OR: [
+          { locataireId: userId },
+          { proprietaireId: userId }
+        ]
+      },
       select: { id: true }
     });
 
@@ -116,6 +142,22 @@ exports.sendMessage = async (req, res) => {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
+    // Si l'expéditeur est le locataire, vérifier que sa demande de visite pour ce bien est acceptée
+    if (expediteurId === conversation.locataireId && conversation.annonceId) {
+      const visite = await prisma.demandeVisite.findFirst({
+        where: {
+          locataireId: conversation.locataireId,
+          annonceId: conversation.annonceId
+        },
+        select: { statut: true }
+      });
+      if (!visite || visite.statut !== 'ACCEPTEE') {
+        return res.status(403).json({ 
+          message: "Vous ne pouvez pas envoyer de message tant que le propriétaire n'a pas accepté votre demande de visite." 
+        });
+      }
+    }
+
     const newMessage = await prisma.message.create({
       data: {
         contenu,
@@ -130,11 +172,50 @@ exports.sendMessage = async (req, res) => {
     });
 
     const destinataireId = conversation.locataireId === expediteurId ? conversation.proprietaireId : conversation.locataireId;
+    console.log(`[SocketServer] ✉️ Nouveau message de ${expediteurId} pour ${destinataireId}. Contenu: "${contenu}"`);
     if (req.io) {
-      req.io.to(`user_${destinataireId}`).emit('nouveau_message', newMessage);
+      const room = `user_${destinataireId}`;
+      req.io.to(room).emit('nouveau_message', newMessage);
+      req.io.to(room).emit('unread_count_update');
+      console.log(`[SocketServer] 📣 Événement 'nouveau_message' et 'unread_count_update' émis vers la room: ${room}`);
+    } else {
+      console.warn('[SocketServer] ⚠️ req.io n\'est pas disponible dans la requête.');
     }
 
     res.status(201).json(newMessage);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+};
+
+exports.markAsRead = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+
+    if (!conversation) return res.status(404).json({ message: 'Conversation non trouvée' });
+    if (conversation.locataireId !== userId && conversation.proprietaireId !== userId) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const updateResult = await prisma.message.updateMany({
+      where: {
+        conversationId,
+        expediteurId: { not: userId },
+        lu: false
+      },
+      data: { lu: true }
+    });
+
+    if (updateResult.count > 0 && req.io) {
+      req.io.to(`user_${userId}`).emit('unread_count_update');
+    }
+
+    res.json({ success: true, markedCount: updateResult.count });
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }

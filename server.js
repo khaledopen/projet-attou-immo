@@ -16,7 +16,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // Adjust for production
+    origin: '*', // Ajuster pour la production
     methods: ['GET', 'POST'],
   },
 });
@@ -24,7 +24,10 @@ const io = new Server(server, {
 const prisma = new PrismaClient();
 
 app.use(cors({
-  origin: ['http://localhost:19006', 'http://localhost:19007', 'http://localhost:5173'],
+  origin: function (origin, callback) {
+    // Autoriser toutes les origines en développement pour éviter les blocages CORS (Expo Web, Tunnels, Localhost ports)
+    callback(null, true);
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -36,36 +39,36 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-// Socket.io connection
+// Connexion Socket.io
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  console.log('[SocketServer] 🟢 Utilisateur connecté:', socket.id, 'depuis l\'origine:', socket.handshake.headers.origin || 'App mobile');
 
   socket.on('join', (userId) => {
     socket.join(`user_${userId}`);
-    console.log(`User ${userId} joined room user_${userId}`);
+    console.log(`[SocketServer] 👥 User ${userId} a rejoint sa room : user_${userId} (Socket ID: ${socket.id})`);
   });
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log('[SocketServer] 🔴 Utilisateur déconnecté:', socket.id, 'Raison:', reason);
   });
 });
 
-// Middleware to inject prisma and io into requests
+// Middleware pour injecter prisma et io dans les requêtes
 app.use((req, res, next) => {
   req.prisma = prisma;
   req.io = io;
   next();
 });
 
-// Basic route
+// Route de base
 app.get('/', (req, res) => {
   res.send('AttouNest API is running...');
 });
 
-// Swagger Documentation
+// Documentation Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
-// Import and use routes
+// Importer et utiliser les routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/properties', require('./routes/propertyRoutes'));
 app.use('/api/visits', require('./routes/visitRoutes'));
@@ -76,6 +79,15 @@ app.use('/api/messages', require('./routes/messageRoutes'));
 
 const PORT = process.env.PORT || 5000;
 
+// Importer le contrôleur de visites pour la logique d'expiration automatique sous 72h
+const { expireVisits } = require('./controllers/visitController');
+
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Exécuter le contrôle d'expiration immédiatement au démarrage, puis toutes les 60 secondes
+  expireVisits(io);
+  setInterval(() => {
+    expireVisits(io);
+  }, 60000);
 });

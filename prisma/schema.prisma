@@ -108,6 +108,7 @@ model Annonce {
   conversations    Conversation[]
 
   raisonSignalement String?
+  signalementCorrige Boolean @default(false)
 
   @@map("annonces")
 }

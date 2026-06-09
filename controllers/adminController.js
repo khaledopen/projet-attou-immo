@@ -1,6 +1,6 @@
 const prisma = require('../config/db');
 
-// Helper to format property URLs (same as in propertyController)
+// Fonction d'aide pour formater les URL de propriétés (comme dans propertyController)
 const cleanPhotoUrl = (url) => {
   if (!url) return '';
   const idx = url.indexOf('/uploads/');
@@ -49,14 +49,14 @@ exports.getStats = async (req, res) => {
 
     const visitsCount = await prisma.demandeVisite.count();
 
-    // Calculate sum of rents of published properties
+    // Calculer la somme des loyers des propriétés publiées
     const rentAggregate = await prisma.annonce.aggregate({
       where: { statut: 'PUBLIEE' },
       _sum: { prix: true }
     });
     const totalRent = rentAggregate._sum.prix || 0;
 
-    // Fetch recent visits
+    // Récupérer les visites récentes
     const recentVisits = await prisma.demandeVisite.findMany({
       take: 5,
       orderBy: { dateCreation: 'desc' },
@@ -70,6 +70,91 @@ exports.getStats = async (req, res) => {
       }
     });
 
+    // Métriques du jour
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todayVisitsCount = await prisma.demandeVisite.count({
+      where: {
+        dateCreation: {
+          gte: todayStart,
+          lte: todayEnd
+        }
+      }
+    });
+
+    const todayUsersCount = await prisma.user.count({
+      where: {
+        dateInscription: {
+          gte: todayStart,
+          lte: todayEnd
+        }
+      }
+    });
+
+    const todayPropertiesCount = await prisma.annonce.count({
+      where: {
+        statut: 'PUBLIEE',
+        datePublication: {
+          gte: todayStart,
+          lte: todayEnd
+        }
+      }
+    });
+
+    // Statistiques quotidiennes des 7 derniers jours pour les graphiques
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }).reverse();
+
+    const dailyStats = await Promise.all(last7Days.map(async (date) => {
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      const users = await prisma.user.count({
+        where: {
+          dateInscription: {
+            gte: date,
+            lt: nextDate
+          }
+        }
+      });
+
+      const properties = await prisma.annonce.count({
+        where: {
+          statut: 'PUBLIEE',
+          datePublication: {
+            gte: date,
+            lt: nextDate
+          }
+        }
+      });
+
+      const visits = await prisma.demandeVisite.count({
+        where: {
+          dateCreation: {
+            gte: date,
+            lt: nextDate
+          }
+        }
+      });
+
+      const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+
+      return {
+        date: date.toISOString().split('T')[0],
+        day: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+        users,
+        properties,
+        visits
+      };
+    }));
+
     res.json({
       locatairesCount,
       proprietairesCount,
@@ -77,7 +162,11 @@ exports.getStats = async (req, res) => {
       propertiesCount,
       visitsCount,
       totalRent,
-      recentVisits
+      recentVisits,
+      todayVisitsCount,
+      todayUsersCount,
+      todayPropertiesCount,
+      dailyStats
     });
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des stats', error: error.message });
@@ -155,7 +244,7 @@ exports.approveProperty = async (req, res) => {
     const { id } = req.params;
     const updated = await prisma.annonce.update({
       where: { id },
-      data: { statut: 'PUBLIEE' },
+      data: { statut: 'PUBLIEE', raisonSignalement: null, signalementCorrige: false },
       include: {
         bien: {
           include: { adresse: true }
@@ -167,7 +256,7 @@ exports.approveProperty = async (req, res) => {
       }
     });
 
-    // Create a notification for all users with the LOCATAIRE role
+    // Créer une notification pour tous les utilisateurs ayant le rôle LOCATAIRE
     const tenants = await prisma.user.findMany({
       where: { role: 'LOCATAIRE' }
     });
@@ -210,22 +299,22 @@ exports.rejectProperty = async (req, res) => {
       return res.status(404).json({ message: 'Annonce non trouvée' });
     }
 
-    // Delete photos
+    // Supprimer les photos
     await prisma.photo.deleteMany({
       where: { annonceId }
     });
 
-    // Delete demands of visits
+    // Supprimer les demandes de visites
     await prisma.demandeVisite.deleteMany({
       where: { annonceId }
     });
 
-    // Delete the annonce itself
+    // Supprimer l'annonce elle-même
     await prisma.annonce.delete({
       where: { id: annonceId }
     });
 
-    // Delete the associated bien & address
+    // Supprimer le bien et l'adresse associés
     if (annonce.bienId) {
       const bien = await prisma.bien.findUnique({
         where: { id: annonce.bienId }
@@ -261,7 +350,13 @@ exports.getVisits = async (req, res) => {
           select: { nom: true, prenom: true, email: true, telephone: true }
         },
         annonce: {
-          select: { titre: true, prix: true }
+          select: { 
+            titre: true, 
+            prix: true,
+            proprietaire: {
+              select: { nom: true, prenom: true, email: true, telephone: true }
+            }
+          }
         }
       }
     });

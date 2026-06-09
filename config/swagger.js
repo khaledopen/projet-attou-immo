@@ -27,7 +27,7 @@ const options = {
       },
     },
   },
-  apis: ['./routes/*.js', './controllers/*.js'], // Scan routes and controllers for JSDoc
+  apis: ['./routes/*.js', './controllers/*.js'], // Scanner les routes et contrôleurs pour JSDoc
 };
 
 const specs = swaggerJsdoc(options);
