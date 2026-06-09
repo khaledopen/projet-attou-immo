@@ -7,7 +7,7 @@ const SettingsPage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Profile state
+  // État du profil
   const [profile, setProfile] = useState({
     nom: 'Administrateur',
     prenom: 'Principal',
@@ -15,14 +15,14 @@ const SettingsPage = () => {
     telephone: '',
   });
 
-  // Password state
+  // État du mot de passe
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
     confirm: '',
   });
 
-  // Notifications preferences
+  // Préférences des notifications
   const [notifications, setNotifications] = useState({
     newUser: true,
     newProperty: true,
@@ -31,7 +31,7 @@ const SettingsPage = () => {
     emailDigest: false,
   });
 
-  // Business rules state
+  // État des règles de gestion
   const [businessRules, setBusinessRules] = useState({
     maxActiveListings: 20,
     maxPhotosPerListing: 10,
@@ -83,7 +83,7 @@ const SettingsPage = () => {
         <p className="text-slate-500 font-medium">Configurez votre compte administrateur et vos préférences.</p>
       </header>
 
-      {/* Success notification */}
+      {/* Notification de succès */}
       {saved && (
         <div className="mb-8 flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 px-6 py-4 rounded-2xl font-bold text-sm animate-fade-in">
           <CheckCircle size={20} />
@@ -92,7 +92,7 @@ const SettingsPage = () => {
       )}
 
       <div className="flex gap-8">
-        {/* Sidebar Tabs */}
+        {/* Onglets de la barre latérale */}
         <div className="w-64 flex-shrink-0">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 space-y-1">
             {tabs.map(tab => {
@@ -124,9 +124,9 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* Content Area */}
+        {/* Zone de contenu */}
         <div className="flex-1">
-          {/* Profile Tab */}
+          {/* Onglet Profil */}
           {activeTab === 'profile' && (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10">
               <div className="flex items-center gap-5 mb-10">
@@ -191,7 +191,7 @@ const SettingsPage = () => {
             </div>
           )}
 
-          {/* Security Tab */}
+          {/* Onglet Sécurité */}
           {activeTab === 'security' && (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10">
               <h3 className="text-xl font-black text-slate-900 mb-2">Modifier le mot de passe</h3>
@@ -274,7 +274,7 @@ const SettingsPage = () => {
             </div>
           )}
 
-          {/* Notifications Tab */}
+          {/* Onglet Notifications */}
           {activeTab === 'notifications' && (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10">
               <h3 className="text-xl font-black text-slate-900 mb-2">Préférences de notifications</h3>
@@ -319,14 +319,14 @@ const SettingsPage = () => {
             </div>
           )}
 
-          {/* Business Rules Tab */}
+          {/* Onglet Règles de gestion */}
           {activeTab === 'rules' && (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10">
               <h3 className="text-xl font-black text-slate-900 mb-2">Règles métier de la plateforme</h3>
               <p className="text-slate-400 font-medium mb-8">Configurez les limites et règles appliquées aux propriétaires et annonces.</p>
 
               <div className="space-y-8 max-w-xl">
-                {/* Max Active Listings */}
+                {/* Nombre maximum d'annonces actives */}
                 <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
                   <div className="flex justify-between items-center mb-3">
                     <div>
@@ -352,7 +352,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                {/* Max Photos Per Listing */}
+                {/* Nombre maximum de photos par annonce */}
                 <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
                   <div className="flex justify-between items-center mb-3">
                     <div>
@@ -378,7 +378,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                {/* Info Card */}
+                {/* Carte d'information */}
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                   <p className="text-amber-800 text-sm font-bold mb-1">⚠️ Note importante</p>
                   <p className="text-amber-600 text-xs leading-relaxed">

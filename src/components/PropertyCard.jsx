@@ -2,7 +2,7 @@ import React from 'react';
 import { MapPin, Home, Clock } from 'lucide-react';
 
 const PropertyCard = ({ property }) => {
-  // Format relative time from publishedAt date
+  // Formater le temps relatif à partir de la date publishedAt
   const getRelativeTime = (dateString) => {
     if (!dateString) return 'Récent';
     const now = new Date();
@@ -23,7 +23,7 @@ const PropertyCard = ({ property }) => {
     return `${diffMonths}mois`;
   };
 
-  // Map typeBailleur to a readable label
+  // Associer typeBailleur à un libellé lisible
   const getOwnerLabel = (type) => {
     if (!type) return 'Propriétaire';
     const labels = {

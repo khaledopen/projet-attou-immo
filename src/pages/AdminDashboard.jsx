@@ -33,7 +33,7 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
   const chartHeight = height - paddingY * 2;
 
   const values = data.map(d => d[metric] || 0);
-  const maxVal = Math.max(...values, 5); // Ensure it scales nicely even with low values
+  const maxVal = Math.max(...values, 5); // S'assurer que l'échelle s'adapte bien même avec des valeurs faibles
 
   const points = data.map((d, index) => {
     const x = paddingX + (index / (data.length - 1)) * chartWidth;
@@ -41,7 +41,7 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
     return { x, y, val: values[index], label: d.day };
   });
 
-  // Calculate smooth Bezier Curve
+  // Calculer une courbe de Bézier lisse
   let pathD = "";
   if (points.length > 0) {
     pathD = `M ${points[0].x} ${points[0].y}`;
@@ -82,7 +82,7 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
             </linearGradient>
           </defs>
 
-          {/* Grid lines */}
+          {/* Lignes de grille */}
           {yTicks.map((t, idx) => {
             const y = paddingY + chartHeight - t * chartHeight;
             const valLabel = Math.round(t * maxVal);
@@ -110,10 +110,10 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
             );
           })}
 
-          {/* Area under the path */}
+          {/* Zone sous le chemin */}
           {areaD && <path d={areaD} fill={`url(#${gradientId})`} />}
 
-          {/* Path Line */}
+          {/* Ligne de chemin */}
           {pathD && (
             <path
               d={pathD}
@@ -125,7 +125,7 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
             />
           )}
 
-          {/* Markers */}
+          {/* Marqueurs */}
           {points.map((p, idx) => (
             <g key={idx} className="group/point">
               <circle
@@ -136,7 +136,7 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
                 stroke={colorHex}
                 strokeWidth="3"
               />
-              {/* Tooltip Overlay */}
+              {/* Superposition d'info-bulle */}
               <g className="opacity-0 group-hover/point:opacity-100 transition-opacity duration-200">
                 <rect
                   x={p.x - 22}
@@ -160,7 +160,7 @@ const PerformanceChart = ({ data, metric, label, colorHex, gradientId }) => {
             </g>
           ))}
 
-          {/* X Axis Labels */}
+          {/* Étiquettes de l'axe X */}
           {points.map((p, idx) => (
             <text
               key={idx}
@@ -229,7 +229,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      {/* Main KPI Stat Cards */}
+      {/* Cartes des principales statistiques KPI */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
         <StatCard 
           icon={Users} 
@@ -261,7 +261,7 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Beautiful Performance Graphs Section */}
+      {/* Section des graphiques de performance */}
       <div className="mb-10">
         <h3 className="text-xl font-extrabold text-slate-800 mb-5">Analyses de performance (7 derniers jours)</h3>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -289,7 +289,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Recent Visits & Partners Grid */}
+      {/* Grille des visites récentes & partenaires */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
           <div className="flex justify-between items-center mb-8">

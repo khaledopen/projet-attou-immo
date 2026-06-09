@@ -29,7 +29,7 @@ const UsersPage = () => {
 
     try {
       await axios.patch(`${BASE_URL}/admin/users/${userId}/status`, { statut: newStatus });
-      // Update state
+      // Mettre à jour l'état
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, statut: newStatus } : u));
     } catch (err) {
       console.error('Erreur lors de la modification du statut:', err);

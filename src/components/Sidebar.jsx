@@ -1,16 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Home, Users, Calendar, Settings, LogOut, Shield, ChevronRight, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { BASE_URL } from '../api/config';
+import { io } from 'socket.io-client';
 
 const Sidebar = () => {
   const location = useLocation();
+  const [moderationCount, setModerationCount] = useState(0);
+
+  // Récupérer le nombre d'annonces signalées en attente de modération
+  const fetchModerationCount = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/admin/moderation/pending`);
+      setModerationCount(res.data.length);
+    } catch (err) {
+      console.error('Erreur chargement compteur modération:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchModerationCount();
+
+    // Connexion WebSocket pour les mises à jour en temps réel
+    const socketURL = BASE_URL.replace('/api', '');
+    const socket = io(socketURL);
+
+    // Rafraîchir le compteur lors d'événements liés aux propriétés
+    socket.on('property_created', () => fetchModerationCount());
+    socket.on('property_updated', () => fetchModerationCount());
+    socket.on('property_deleted', () => fetchModerationCount());
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Rafraîchir le compteur quand l'admin navigue vers la page Modération
+  useEffect(() => {
+    if (location.pathname === '/moderation') {
+      fetchModerationCount();
+    }
+  }, [location.pathname]);
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/' },
     { icon: Home, label: 'Catalogue Biens', path: '/properties' },
     { icon: Users, label: 'Utilisateurs', path: '/users' },
     { icon: Calendar, label: 'Visites & RDV', path: '/visits' },
-    { icon: Shield, label: 'Modération', path: '/moderation' },
+    { icon: Shield, label: 'Modération', path: '/moderation', badge: moderationCount },
     { icon: Settings, label: 'Paramètres', path: '/settings' },
   ];
 
@@ -35,6 +73,7 @@ const Sidebar = () => {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
+          const hasBadge = item.badge && item.badge > 0;
           return (
             <Link
               key={item.path}
@@ -49,7 +88,28 @@ const Sidebar = () => {
                 <Icon size={22} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-primary-600 transition-colors'} />
                 <span className="text-base tracking-wide">{item.label}</span>
               </div>
-              {isActive && <ChevronRight size={18} className="text-white/80 animate-pulse" />}
+              <div className="flex items-center gap-2">
+                {/* Badge de notification style messagerie */}
+                {hasBadge && (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '20px',
+                    height: '20px',
+                    borderRadius: '10px',
+                    backgroundColor: '#ef4444',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '0 5px',
+                    lineHeight: 1,
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
+                {isActive && <ChevronRight size={18} className="text-white/80 animate-pulse" />}
+              </div>
             </Link>
           );
         })}
@@ -80,4 +140,3 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
-
