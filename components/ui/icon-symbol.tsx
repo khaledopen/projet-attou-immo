@@ -1,4 +1,4 @@
-// Fallback for using MaterialIcons on Android and web.
+// Alternative pour utiliser MaterialIcons sur Android et le web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight, SymbolViewProps } from 'expo-symbols';

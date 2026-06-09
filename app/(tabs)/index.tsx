@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../../api/config';
+import api from '../../api/axiosInstance';
 
 const OwnerDashboard = () => {
   const router = useRouter();
@@ -32,13 +31,13 @@ const OwnerDashboard = () => {
         proprietaireId = userData.id;
       }
 
-      // Fetch properties to count them
-      const propsRes = await axios.get(`${BASE_URL}/properties`, { 
+      // Récupérer les propriétés pour les compter
+      const propsRes = await api.get('/properties', { 
         params: proprietaireId ? { proprietaireId } : {} 
       });
       
       // Fetch visits
-      const visitsRes = await axios.get(`${BASE_URL}/visits/owner`, { headers });
+      const visitsRes = await api.get('/visits/owner');
       
       setStats({
         properties: propsRes.data.length,
@@ -124,7 +123,7 @@ const OwnerDashboard = () => {
               <Text style={styles.tenantName}>{visit.locataire?.prenom || 'Locataire'} {visit.locataire?.nom || ''}</Text>
               <Text style={styles.propertyName}>{visit.annonce?.titre || 'Annonce'}</Text>
               <Text style={styles.visitDate}>
-                <Ionicons name="time-outline" size={12} /> {visit.dateProposee ? new Date(visit.dateProposee).toLocaleDateString('fr-FR') : 'Date non définie'}
+                <Ionicons name="time-outline" size={12} /> {visit.dateProposee ? `${new Date(visit.dateProposee).toLocaleDateString('fr-FR')} à ${new Date(visit.dateProposee).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Date non définie'}
               </Text>
             </View>
             <View style={[styles.statusBadge, visit.statut === 'ACCEPTEE' ? styles.statusAccepted : styles.statusPending]}>

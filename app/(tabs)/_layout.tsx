@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import { BASE_URL, SOCKET_URL } from '../../api/config';
+import { SOCKET_URL } from '../../api/config';
+import api from '../../api/axiosInstance';
 import { io } from 'socket.io-client';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,9 +17,7 @@ export default function TabLayout() {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
-      const res = await axios.get(`${BASE_URL}/messages/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/messages/unread-count');
       setUnreadCount(res.data.unreadCount);
     } catch (e) {
       // silently fail
@@ -33,10 +31,19 @@ export default function TabLayout() {
       const userStr = await AsyncStorage.getItem('userData');
       if (userStr) {
         const user = JSON.parse(userStr);
-        socketRef.current = io(SOCKET_URL);
+        socketRef.current = io(SOCKET_URL, {
+          transports: ['polling', 'websocket'],
+          extraHeaders: {
+            'ngrok-skip-browser-warning': 'true',
+            'bypass-tunnel-reminder': 'true',
+          }
+        });
         socketRef.current.emit('join', user.id);
         socketRef.current.on('nouveau_message', () => {
-          setUnreadCount((prev) => prev + 1);
+          fetchUnreadCount();
+        });
+        socketRef.current.on('unread_count_update', () => {
+          fetchUnreadCount();
         });
       }
     };

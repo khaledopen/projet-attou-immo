@@ -64,6 +64,36 @@ const OwnerProperties = () => {
     );
   };
 
+  const handleToggleRentStatus = async (id: string, currentStatus: string) => {
+    const isRented = currentStatus === 'ARCHIVEE';
+    const newStatus = isRented ? 'PUBLIEE' : 'ARCHIVEE';
+    
+    Alert.alert(
+      isRented ? 'Remettre en location' : 'Marquer comme loué',
+      isRented 
+        ? 'Voulez-vous remettre ce bien en location ? Il sera à nouveau visible par les locataires.' 
+        : 'Voulez-vous marquer ce bien comme loué ? Il ne sera plus affiché dans les résultats de recherche.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: isRented ? 'Relouer' : 'Confirmer',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await api.put(`/properties/${id}`, { statut: newStatus });
+              Alert.alert('Succès', isRented ? 'Le bien est à nouveau en location.' : 'Le bien a été marqué comme loué.');
+              fetchMyProperties();
+            } catch (error) {
+              console.error('Erreur changement statut:', error);
+              Alert.alert('Erreur', 'Impossible de modifier le statut de ce bien.');
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   useEffect(() => {
     fetchMyProperties();
   }, []);
@@ -86,41 +116,73 @@ const OwnerProperties = () => {
     }
   }, [socket]);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      {item.photos?.[0]?.url ? (
-        <Image source={{ uri: item.photos[0].url, headers: { 'bypass-tunnel-reminder': 'true' } }} style={styles.image} />
-      ) : (
-        <View style={styles.noImagePlaceholder}>
-          <Ionicons name="image-outline" size={40} color="#94a3b8" />
-          <Text style={styles.noImageText}>Aucune photo disponible</Text>
-        </View>
-      )}
-      <View style={styles.info}>
-        <Text style={styles.title}>{item.titre}</Text>
-        <Text style={styles.price}>{item.prix.toLocaleString()} FCFA</Text>
-        <View style={styles.statusRow}>
-          <View style={[styles.badge, item.statut === 'PUBLIEE' ? styles.badgeActive : styles.badgeDraft]}>
-            <Text style={styles.badgeText}>{item.statut}</Text>
+  const renderItem = ({ item }) => {
+    let statusText = item.statut;
+    let badgeStyle = styles.badgeDraft;
+    let badgeTextStyle = styles.badgeTextDraft;
+
+    if (item.statut === 'PUBLIEE') {
+      statusText = 'ACTIF';
+      badgeStyle = styles.badgeActive;
+      badgeTextStyle = styles.badgeTextActive;
+    } else if (item.statut === 'ARCHIVEE') {
+      statusText = 'LOUÉ';
+      badgeStyle = styles.badgeRented;
+      badgeTextStyle = styles.badgeTextRented;
+    } else if (item.statut === 'EN_ATTENTE') {
+      statusText = 'EN ATTENTE';
+      badgeStyle = styles.badgePending;
+      badgeTextStyle = styles.badgeTextPending;
+    }
+
+    return (
+      <View style={styles.card}>
+        {item.photos?.[0]?.url ? (
+          <Image source={{ uri: item.photos[0].url, headers: { 'bypass-tunnel-reminder': 'true' } }} style={styles.image} />
+        ) : (
+          <View style={styles.noImagePlaceholder}>
+            <Ionicons name="image-outline" size={40} color="#94a3b8" />
+            <Text style={styles.noImageText}>Aucune photo disponible</Text>
           </View>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.editBtn} 
-              onPress={() => router.push({ pathname: '/edit-property', params: { id: item.id } })}
-            >
-              <Ionicons name="create-outline" size={20} color="#0ea5e9" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.deleteBtn} 
-              onPress={() => handleDelete(item.id)}
-            >
-              <Ionicons name="trash-outline" size={20} color="#ef4444" />
-            </TouchableOpacity>
+        )}
+        <View style={styles.info}>
+          <Text style={styles.title}>{item.titre}</Text>
+          <Text style={styles.price}>{item.prix.toLocaleString()} FCFA</Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.badge, badgeStyle]}>
+              <Text style={[styles.badgeText, badgeTextStyle]}>{statusText}</Text>
+            </View>
+            <View style={styles.actionButtons}>
+              {item.statut !== 'EN_ATTENTE' && item.statut !== 'REJETEE' && (
+                <TouchableOpacity 
+                  style={styles.statusBtn} 
+                  onPress={() => handleToggleRentStatus(item.id, item.statut)}
+                >
+                  <Ionicons 
+                    name={item.statut === 'ARCHIVEE' ? "refresh-circle-outline" : "key-outline"} 
+                    size={22} 
+                    color={item.statut === 'ARCHIVEE' ? "#10b981" : "#f59e0b"} 
+                  />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.editBtn} 
+                onPress={() => router.push({ pathname: '/edit-property', params: { id: item.id } })}
+              >
+                <Ionicons name="create-outline" size={20} color="#0ea5e9" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.deleteBtn} 
+                onPress={() => handleDelete(item.id)}
+              >
+                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#0ea5e9" />;
 
@@ -157,11 +219,18 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '800', color: '#1e293b' },
   price: { fontSize: 14, color: '#0ea5e9', fontWeight: '700', marginTop: 4 },
   statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  badgeActive: { backgroundColor: '#f0fdf4' },
-  badgeDraft: { backgroundColor: '#fff7ed' },
-  badgeText: { fontSize: 10, fontWeight: '800', color: '#1e293b' },
-  actionButtons: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  badgeActive: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 },
+  badgeTextActive: { color: '#15803d' },
+  badgeDraft: { backgroundColor: '#fff7ed', borderColor: '#ffedd5', borderWidth: 1 },
+  badgeTextDraft: { color: '#c2410c' },
+  badgeRented: { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1', borderWidth: 1 },
+  badgeTextRented: { color: '#475569' },
+  badgePending: { backgroundColor: '#fef9c3', borderColor: '#fef08a', borderWidth: 1 },
+  badgeTextPending: { color: '#a16207' },
+  badgeText: { fontSize: 10, fontWeight: '900' },
+  actionButtons: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  statusBtn: { padding: 5 },
   editBtn: { padding: 5 },
   deleteBtn: { padding: 5 },
   empty: { alignItems: 'center', marginTop: 100 },

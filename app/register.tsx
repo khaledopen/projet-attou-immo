@@ -125,9 +125,12 @@ const RegisterScreen = () => {
         email: form.email,
         password: form.motDePasse,
       });
-      const { token, user } = loginRes.data;
+      const { token, refreshToken, user } = loginRes.data;
       // 3. Sauvegarder le token et les données utilisateur
       await AsyncStorage.setItem('userToken', token);
+      if (refreshToken) {
+        await AsyncStorage.setItem('refreshToken', refreshToken);
+      }
       await AsyncStorage.setItem('userData', JSON.stringify(user));
       // 4. Redirection directe vers l'espace propriétaire
       router.replace('/(tabs)');

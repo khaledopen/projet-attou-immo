@@ -110,12 +110,15 @@ const LoginScreen = () => {
     try {
       setLoading(true);
       const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
+      const { token, refreshToken, user } = response.data;
       if (user.role !== 'PROPRIETAIRE' && user.role !== 'ADMIN') {
         Alert.alert('Accès refusé', 'Réservé aux propriétaires.');
         return;
       }
       await AsyncStorage.setItem('userToken', token);
+      if (refreshToken) {
+        await AsyncStorage.setItem('refreshToken', refreshToken);
+      }
       await AsyncStorage.setItem('userData', JSON.stringify(user));
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -236,6 +239,10 @@ const LoginScreen = () => {
                 />
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 15, marginTop: 5 }} onPress={() => router.push('/forgot-password')}>
+              <Text style={{ color: '#0284c7', fontSize: 13, fontWeight: '600' }}>Mot de passe oublié ?</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
               {loading

@@ -27,17 +27,37 @@ const AddProperty = () => {
     codePostal: '',
   });
 
+  const availableEquipments = [
+    { id: 'Climatisation', label: '❄️ Climatisation' },
+    { id: 'Eau chaude', label: '🔥 Eau chaude' },
+    { id: 'Internet', label: '🌐 Internet' },
+    { id: 'Groupe électrogène', label: '⚡ Groupe électrogène' },
+    { id: 'Piscine', label: '🏊 Piscine' },
+    { id: 'Gardiennage', label: '🛡️ Gardiennage' },
+    { id: 'Parking', label: '🚗 Parking' },
+  ];
+
+  const [selectedEquipments, setSelectedEquipments] = useState<string[]>([]);
+
+  const toggleEquipment = (id: string) => {
+    if (selectedEquipments.includes(id)) {
+      setSelectedEquipments(selectedEquipments.filter(e => e !== id));
+    } else {
+      setSelectedEquipments([...selectedEquipments, id]);
+    }
+  };
+
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert('Permission requise', 'Accès à la galerie requis pour ajouter des photos.');
       return;
     }
-const result = await ImagePicker.launchImageLibraryAsync({
-  mediaTypes: ['images'],
-  allowsMultipleSelection: true,
-  quality: 0.3,
-});
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.3,
+    });
     if (!result.canceled) {
       const uris = result.assets.map(asset => asset.uri);
       setImages([...images, ...uris]);
@@ -51,9 +71,9 @@ const result = await ImagePicker.launchImageLibraryAsync({
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-    mediaTypes: ['images'],
-    quality: 0.3,
-  });
+      mediaTypes: ['images'],
+      quality: 0.3,
+    });
     if (!result.canceled && result.assets?.[0]?.uri) {
       setImages([...images, result.assets[0].uri]);
     }
@@ -141,7 +161,7 @@ const result = await ImagePicker.launchImageLibraryAsync({
         nombrePieces: parseInt(form.nombrePieces) || 0,
         nombreChambres: parseInt(form.nombreChambres) || 0,
         etage: form.etage ? parseInt(form.etage) : null,
-        equipements: ["Wifi", "Climatisation"],
+        equipements: selectedEquipments,
         photos: uploadedUrls,
       };
 
@@ -152,7 +172,7 @@ const result = await ImagePicker.launchImageLibraryAsync({
       Alert.alert('Succès', 'Votre annonce a été publiée avec succès !', [
         { text: 'Super', onPress: () => router.replace('/(tabs)') }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur publication:', error);
       const msg = error.response?.data?.message || error.message || 'Erreur lors de la publication';
       Alert.alert('Erreur', `Impossible de publier l'annonce. ${msg}`);
@@ -292,6 +312,32 @@ const result = await ImagePicker.launchImageLibraryAsync({
           </View>
 
           <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Équipements inclus</Text>
+            <View style={styles.equipmentGrid}>
+              {availableEquipments.map((eq) => {
+                const isSelected = selectedEquipments.includes(eq.id);
+                return (
+                  <TouchableOpacity
+                    key={eq.id}
+                    style={[styles.equipmentItem, isSelected && styles.equipmentItemActive]}
+                    onPress={() => toggleEquipment(eq.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons 
+                      name={isSelected ? "checkbox" : "square-outline"} 
+                      size={20} 
+                      color={isSelected ? "#fff" : "#64748b"} 
+                    />
+                    <Text style={[styles.equipmentLabel, isSelected && styles.equipmentLabelActive]}>
+                      {eq.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.card}>
             <Text style={styles.sectionTitle}>Localisation</Text>
             <TextInput
               style={styles.input}
@@ -353,7 +399,12 @@ const styles = StyleSheet.create({
   removeImageButton: { position: 'absolute', top: -6, right: -6, backgroundColor: '#fff', borderRadius: 11 },
   footer: { padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e2e8f0' },
   submitButton: { backgroundColor: '#0284c7', paddingVertical: 18, borderRadius: 18, alignItems: 'center', shadowColor: '#0284c7', shadowOpacity: 0.25, shadowRadius: 15, elevation: 5 },
-  submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+  submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  equipmentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  equipmentItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', minWidth: '47%' },
+  equipmentItemActive: { backgroundColor: '#0284c7', borderColor: '#0284c7' },
+  equipmentLabel: { fontSize: 13, fontWeight: '700', color: '#475569' },
+  equipmentLabelActive: { color: '#fff' }
 });
 
 export default AddProperty;

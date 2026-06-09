@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../../api/config';
+import api from '../../api/axiosInstance';
 
 const OwnerVisits = () => {
   const [visits, setVisits] = useState([]);
@@ -14,9 +13,7 @@ const OwnerVisits = () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
-      const response = await axios.get(`${BASE_URL}/visits/owner`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/visits/owner');
       setVisits(response.data);
     } catch (error: any) {
       console.log('Erreur visites:', error.message || error);
@@ -32,10 +29,7 @@ const OwnerVisits = () => {
 
   const handleStatusChange = async (id, newStatut) => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      await axios.patch(`${BASE_URL}/visits/${id}/status`, { statut: newStatut }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.patch(`/visits/${id}/status`, { statut: newStatut });
       Alert.alert('Succès', `Visite ${newStatut.toLowerCase()}`);
       fetchVisits();
     } catch (error) {
@@ -46,9 +40,17 @@ const OwnerVisits = () => {
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.date}>{new Date(item.dateProposee).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-        <View style={[styles.badge, item.statut === 'ACCEPTEE' ? styles.badgeSuccess : styles.badgePending]}>
-          <Text style={styles.badgeText}>{item.statut}</Text>
+        <Text style={styles.date}>
+          {new Date(item.dateProposee).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {new Date(item.dateProposee).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+        <View style={[
+          styles.badge, 
+          item.statut === 'ACCEPTEE' ? styles.badgeSuccess : (item.statut === 'REFUSEE' ? styles.badgeDanger : styles.badgePending)
+        ]}>
+          <Text style={[
+            styles.badgeText,
+            item.statut === 'ACCEPTEE' ? styles.badgeTextSuccess : (item.statut === 'REFUSEE' ? styles.badgeTextDanger : styles.badgeTextPending)
+          ]}>{item.statut}</Text>
         </View>
       </View>
       
@@ -101,7 +103,11 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   badgeSuccess: { backgroundColor: '#f0fdf4' },
   badgePending: { backgroundColor: '#fff7ed' },
+  badgeDanger: { backgroundColor: '#fef2f2' },
   badgeText: { fontSize: 10, fontWeight: '800' },
+  badgeTextSuccess: { color: '#15803d' },
+  badgeTextPending: { color: '#c2410c' },
+  badgeTextDanger: { color: '#ef4444' },
   propertyTitle: { fontSize: 17, fontWeight: '800', color: '#1e293b', marginBottom: 8 },
   tenantInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   tenantName: { marginLeft: 8, fontSize: 14, color: '#64748b', fontWeight: '600' },

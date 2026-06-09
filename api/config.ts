@@ -6,19 +6,19 @@ let backendIP = process.env.EXPO_PUBLIC_BACKEND_IP || '192.168.1.16';
 
 // Helper to extract development host IP from Expo Constants
 const getDevHostIP = (): string | null => {
-  // 1. Check hostUri from expoConfig (Expo Go)
+  // 1. Vérifier l'hostUri depuis expoConfig (Expo Go)
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) return hostUri.split(':')[0];
 
-  // 2. Check debuggerHost from expoConfig
+  // 2. Vérifier le debuggerHost depuis expoConfig
   const debuggerHost = Constants.expoConfig?.debuggerHost;
   if (debuggerHost) return debuggerHost.split(':')[0];
 
-  // 3. Check debuggerHost from manifest (older SDKs)
+  // 3. Vérifier le debuggerHost depuis le manifest (anciennes versions de SDK)
   const manifestDebuggerHost = Constants.manifest?.debuggerHost;
   if (manifestDebuggerHost) return manifestDebuggerHost.split(':')[0];
 
-  // 4. Check manifest2 (newer SDKs / Expo Go)
+  // 4. Vérifier manifest2 (versions plus récentes de SDK / Expo Go)
   const manifest2Uri = (Constants as any).manifest2?.extra?.expoGoLaunchQueryParams?.hostUri;
   if (manifest2Uri) return manifest2Uri.split(':')[0];
 

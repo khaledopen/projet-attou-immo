@@ -30,6 +30,26 @@ const EditProperty = () => {
     codePostal: '',
   });
 
+  const availableEquipments = [
+    { id: 'Climatisation', label: '❄️ Climatisation' },
+    { id: 'Eau chaude', label: '🔥 Eau chaude' },
+    { id: 'Internet', label: '🌐 Internet' },
+    { id: 'Groupe électrogène', label: '⚡ Groupe électrogène' },
+    { id: 'Piscine', label: '🏊 Piscine' },
+    { id: 'Gardiennage', label: '🛡️ Gardiennage' },
+    { id: 'Parking', label: '🚗 Parking' },
+  ];
+
+  const [selectedEquipments, setSelectedEquipments] = useState<string[]>([]);
+
+  const toggleEquipment = (id: string) => {
+    if (selectedEquipments.includes(id)) {
+      setSelectedEquipments(selectedEquipments.filter(e => e !== id));
+    } else {
+      setSelectedEquipments([...selectedEquipments, id]);
+    }
+  };
+  
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       try {
@@ -49,6 +69,10 @@ const EditProperty = () => {
           ville: data.bien?.adresse?.ville || 'Abidjan',
           codePostal: data.bien?.adresse?.codePostal || '',
         });
+
+        if (data.bien?.equipements) {
+          setSelectedEquipments(data.bien.equipements);
+        }
 
         if (data.photos) {
           const urls = data.photos.map((p: any) => p.url);
@@ -182,7 +206,7 @@ const EditProperty = () => {
         nombrePieces: parseInt(form.nombrePieces) || 0,
         nombreChambres: parseInt(form.nombreChambres) || 0,
         etage: form.etage ? parseInt(form.etage) : null,
-        equipements: ["Wifi", "Climatisation"],
+        equipements: selectedEquipments,
         photos: allPhotos,
       };
 
@@ -231,7 +255,7 @@ const EditProperty = () => {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Photos du bien</Text>
             
-            {/* Existing Photos */}
+            {/* Photos existantes */}
             {existingPhotos.length > 0 && (
               <View style={{ marginBottom: 12 }}>
                 <Text style={styles.subLabel}>Photos actuelles :</Text>
@@ -260,7 +284,7 @@ const EditProperty = () => {
               </TouchableOpacity>
             </View>
 
-            {/* New Photos Preview */}
+            {/* Aperçu des nouvelles photos */}
             {images.length > 0 && (
               <View style={{ marginTop: 8 }}>
                 <Text style={styles.subLabel}>Nouvelles photos :</Text>
@@ -363,6 +387,32 @@ const EditProperty = () => {
           </View>
 
           <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Équipements inclus</Text>
+            <View style={styles.equipmentGrid}>
+              {availableEquipments.map((eq) => {
+                const isSelected = selectedEquipments.includes(eq.id);
+                return (
+                  <TouchableOpacity
+                    key={eq.id}
+                    style={[styles.equipmentItem, isSelected && styles.equipmentItemActive]}
+                    onPress={() => toggleEquipment(eq.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons 
+                      name={isSelected ? "checkbox" : "square-outline"} 
+                      size={20} 
+                      color={isSelected ? "#fff" : "#64748b"} 
+                    />
+                    <Text style={[styles.equipmentLabel, isSelected && styles.equipmentLabelActive]}>
+                      {eq.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.card}>
             <Text style={styles.sectionTitle}>Localisation</Text>
             <TextInput 
               style={styles.input} 
@@ -427,7 +477,12 @@ const styles = StyleSheet.create({
   removeImageButton: { position: 'absolute', top: -6, right: -6, backgroundColor: '#fff', borderRadius: 11 },
   footer: { padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e2e8f0' },
   submitButton: { backgroundColor: '#0284c7', paddingVertical: 18, borderRadius: 18, alignItems: 'center', shadowColor: '#0284c7', shadowOpacity: 0.25, shadowRadius: 15, elevation: 5 },
-  submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+  submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  equipmentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  equipmentItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', minWidth: '47%' },
+  equipmentItemActive: { backgroundColor: '#0284c7', borderColor: '#0284c7' },
+  equipmentLabel: { fontSize: 13, fontWeight: '700', color: '#475569' },
+  equipmentLabelActive: { color: '#fff' }
 });
 
 export default EditProperty;
