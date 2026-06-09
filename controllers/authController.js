@@ -33,10 +33,10 @@ exports.register = async (req, res) => {
     });
 
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '15m',
+      expiresIn: '2h',
     });
     const refreshToken = jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '2h',
     });
 
     res.status(201).json({ 
@@ -77,10 +77,10 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '15m',
+      expiresIn: '2h',
     });
     const refreshToken = jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '2h',
     });
 
     res.json({ 
@@ -240,10 +240,10 @@ exports.refreshToken = async (req, res) => {
     }
 
     const newAccessToken = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '15m',
+      expiresIn: '2h',
     });
     const newRefreshToken = jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '2h',
     });
 
     res.json({
