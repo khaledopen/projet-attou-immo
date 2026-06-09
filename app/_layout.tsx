@@ -101,10 +101,10 @@ export default function RootLayout() {
       const token = await AsyncStorage.getItem('userToken');
       if (token) {
         const timeSinceActive = Date.now() - lastActive.current;
-        if (timeSinceActive > 3600000) { // 1 heure d'inactivité
-          console.log('[Inactivity] Déconnexion automatique du propriétaire après 1 heure.');
+        if (timeSinceActive > 7200000) { // 2 heures d'inactivité
+          console.log('[Inactivity] Déconnexion automatique du propriétaire après 2 heures.');
           await AsyncStorage.multiRemove(['userToken', 'userData', 'refreshToken']);
-          Alert.alert('Inactivité', 'Vous avez été déconnecté après 1 heure d\'inactivité.');
+          Alert.alert('Inactivité', 'Vous avez été déconnecté après 2 heures d\'inactivité.');
           router.replace('/login');
         }
       } else {
