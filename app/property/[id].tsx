@@ -10,12 +10,12 @@ import { BASE_URL } from '../../api/config';
 const PropertyDetails = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [property, setProperty] = useState(null);
+  const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const flatListRef = useRef(null);
+  const flatListRef = useRef<any>(null);
   const { width } = Dimensions.get('window');
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -37,7 +37,7 @@ const PropertyDetails = () => {
     try {
       const stored = await AsyncStorage.getItem('favorites');
       const favList = stored ? JSON.parse(stored) : [];
-      setIsFavorite(favList.some(item => item.id === id));
+      setIsFavorite(favList.some((item: any) => item.id === id));
     } catch (e) {
       console.error(e);
     }
@@ -49,7 +49,7 @@ const PropertyDetails = () => {
       const stored = await AsyncStorage.getItem('favorites');
       let favList = stored ? JSON.parse(stored) : [];
       if (isFavorite) {
-        favList = favList.filter(item => item.id !== id);
+        favList = favList.filter((item: any) => item.id !== id);
       } else {
         favList.push(property);
       }
@@ -226,7 +226,7 @@ const PropertyDetails = () => {
               )}
             />
             <View style={styles.paginationDots}>
-              {property.photos.map((_, index) => (
+              {property.photos.map((_: any, index: number) => (
                 <View
                   key={index}
                   style={[styles.dot, activePhotoIndex === index ? styles.activeDot : null]}
@@ -262,6 +262,15 @@ const PropertyDetails = () => {
             <Ionicons name="location" size={16} color="#0ea5e9" />
             <Text style={styles.location}>{property.bien.adresse.ville}, {property.bien.adresse.rue}</Text>
           </View>
+
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={() => router.push(`/(tabs)/explore?focus=${property.id}`)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="map-outline" size={18} color="#0ea5e9" style={{ marginRight: 6 }} />
+            <Text style={styles.mapButtonText}>Voir sur la carte</Text>
+          </TouchableOpacity>
 
           <View style={styles.specs}>
             <View style={styles.specItem}>
@@ -438,6 +447,23 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
   locationContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   location: { color: '#64748b', marginLeft: 5, fontSize: 14, flexShrink: 1 },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9ff',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+    marginBottom: 20,
+    alignSelf: 'flex-start',
+  },
+  mapButtonText: {
+    color: '#0ea5e9',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   specs: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: '#f8fafc', borderRadius: 20, marginBottom: 25, gap: 8 },
   specItem: { flex: 1, alignItems: 'center' },
   specText: { marginTop: 5, fontSize: 12, fontWeight: 'bold', color: '#1e293b' },
