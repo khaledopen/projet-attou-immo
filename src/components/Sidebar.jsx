@@ -63,7 +63,7 @@ const Sidebar = () => {
           <h1 className="text-2xl font-black tracking-tight text-slate-900">
             Attou<span className="text-primary-600">Nest</span>
           </h1>
-          <p className="text-[10px] font-extrabold uppercase tracking-widest text-primary-600/80">Admin Portal • Pro</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-primary-600/80">Portail d'administration</p>
         </div>
       </div>
 
