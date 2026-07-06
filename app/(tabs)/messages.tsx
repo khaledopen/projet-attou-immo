@@ -64,7 +64,16 @@ export default function MessagesScreen() {
 
           socketRef.current.on('nouveau_message', (msg) => {
             if (active) {
-              playMessageSound();
+              // Play sound only for messages from others
+              if (String(msg.expediteurId) !== String(user.id)) {
+                playMessageSound();
+              }
+              fetchConversations();
+            }
+          });
+
+          socketRef.current.on('unread_count_update', () => {
+            if (active) {
               fetchConversations();
             }
           });
@@ -101,6 +110,26 @@ export default function MessagesScreen() {
     return <View style={styles.center}><ActivityIndicator size="large" color="#0ea5e9" /></View>;
   }
 
+  // Helper for time formatting
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    } else if (diffDays === 1) {
+      return 'Hier';
+    } else if (diffDays < 7) {
+      const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+      return days[date.getDay()];
+    } else {
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    }
+  };
+
   // Regrouper les conversations par bien (annonce)
   const conversationsByAnnonce = conversations.reduce((acc: any, conv: any) => {
     if (!conv.annonce) return acc;
@@ -134,17 +163,28 @@ export default function MessagesScreen() {
   const renderAnnonceItem = ({ item }: any) => {
     const totalDemandes = item.conversations.length;
     const acceptedCount = item.conversations.filter((c: any) => c.statutVisite === 'ACCEPTEE').length;
+    // Compute total unread messages for all conversations of this property
+    const totalUnread = item.conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
 
     return (
       <TouchableOpacity 
-        style={styles.annonceCard} 
+        style={[styles.annonceCard, totalUnread > 0 && styles.annonceCardUnread]} 
         onPress={() => setSelectedAnnonceId(item.annonce.id)}
       >
-        <View style={styles.annonceIconContainer}>
-          <Ionicons name="business" size={24} color="#0ea5e9" />
+        <View style={styles.annonceIconOuterContainer}>
+          <View style={[styles.annonceIconContainer, totalUnread > 0 && styles.annonceIconContainerUnread]}>
+            <Ionicons name="business" size={24} color={totalUnread > 0 ? '#fff' : '#0ea5e9'} />
+          </View>
+          {totalUnread > 0 && (
+            <View style={styles.annonceUnreadDot}>
+              <Text style={styles.annonceUnreadDotText}>
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.annonceInfo}>
-          <Text style={styles.annonceTitle} numberOfLines={1}>{item.annonce.titre}</Text>
+          <Text style={[styles.annonceTitle, totalUnread > 0 && styles.annonceTitleUnread]} numberOfLines={1}>{item.annonce.titre}</Text>
           <Text style={styles.annonceSubtitle}>
             {totalDemandes} {totalDemandes > 1 ? 'demandes reçues' : 'demande reçue'}
           </Text>
@@ -162,7 +202,10 @@ export default function MessagesScreen() {
   // Rendu de la liste des locataires pour un bien sélectionné
   const renderLocataireItem = ({ item }: any) => {
     const interlocuteur = item.locataire;
-    let lastMessage = item.messages?.[0]?.contenu || 'Nouvelle conversation';
+    const hasUnread = (item.unreadCount || 0) > 0;
+    const lastMsg = item.messages?.[0];
+    let lastMessage = lastMsg?.contenu || 'Nouvelle conversation';
+    const lastTime = lastMsg?.dateEnvoi || item.dateMiseAJour;
     const isWarn = lastMessage.startsWith('[ADMIN_WARN]');
 
     if (lastMessage.startsWith('SYSTEM_PENDING|')) {
@@ -182,15 +225,28 @@ export default function MessagesScreen() {
 
     return (
       <TouchableOpacity 
-        style={[styles.convCard, !isAccepted && styles.convCardLocked]} 
+        style={[styles.convCard, !isAccepted && styles.convCardLocked, hasUnread && styles.convCardUnread]} 
         onPress={() => handleSelectLocataire(item)}
       >
-        <View style={[styles.avatar, { backgroundColor: isWarn ? '#ef4444' : (isAccepted ? '#10b981' : '#94a3b8') }]}>
-          <Text style={styles.avatarText}>{isWarn ? 'A' : interlocuteur.prenom[0]}</Text>
+        {/* Avatar with unread indicator */}
+        <View style={styles.avatarContainer}>
+          <View style={[styles.avatar, { backgroundColor: isWarn ? '#ef4444' : (isAccepted ? '#10b981' : '#94a3b8') }, hasUnread && styles.avatarUnread]}>
+            <Text style={styles.avatarText}>{isWarn ? 'A' : interlocuteur.prenom[0]}</Text>
+          </View>
+          {hasUnread && <View style={styles.onlineDot} />}
         </View>
+
         <View style={styles.convInfo}>
           <View style={styles.locataireHeader}>
-            <Text style={styles.name}>{isWarn ? 'Administrateur AttouHome' : `${interlocuteur.prenom} ${interlocuteur.nom}`}</Text>
+            <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
+              {isWarn ? 'Administrateur AttouHome' : `${interlocuteur.prenom} ${interlocuteur.nom}`}
+            </Text>
+            <Text style={[styles.timeText, hasUnread && styles.timeTextUnread]}>
+              {formatTime(lastTime)}
+            </Text>
+          </View>
+
+          <View style={styles.statusRow}>
             <View style={[
               styles.statusBadge, 
               isWarn ? { backgroundColor: '#fee2e2' } : (isAccepted ? styles.statusBadgeSuccess : (item.statutVisite === 'REFUSEE' ? styles.statusBadgeDanger : styles.statusBadgePending))
@@ -203,13 +259,28 @@ export default function MessagesScreen() {
               </Text>
             </View>
           </View>
-          <Text style={styles.lastMessage} numberOfLines={1}>{lastMessage}</Text>
+
+          <View style={styles.bottomRow}>
+            <Text style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} numberOfLines={1}>
+              {lastMessage}
+            </Text>
+            {hasUnread && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>
+                  {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-        <Ionicons 
-          name={isAccepted ? "chatbox-ellipses" : "lock-closed-outline"} 
-          size={20} 
-          color={isWarn ? "#ef4444" : (isAccepted ? "#0ea5e9" : "#94a3b8")} 
-        />
+
+        {!hasUnread && (
+          <Ionicons 
+            name={isAccepted ? "chatbox-ellipses" : "lock-closed-outline"} 
+            size={20} 
+            color={isWarn ? "#ef4444" : (isAccepted ? "#0ea5e9" : "#94a3b8")} 
+          />
+        )}
       </TouchableOpacity>
     );
   };
@@ -303,17 +374,49 @@ const styles = StyleSheet.create({
     shadowRadius: 10, 
     elevation: 2 
   },
+  annonceCardUnread: {
+    backgroundColor: '#f0f9ff',
+    borderColor: '#bae6fd',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0ea5e9',
+  },
+  annonceIconOuterContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
   annonceIconContainer: { 
     width: 46, 
     height: 46, 
     borderRadius: 12, 
     backgroundColor: '#e0f2fe', 
     justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 12 
+    alignItems: 'center',
+  },
+  annonceIconContainerUnread: {
+    backgroundColor: '#0ea5e9',
+  },
+  annonceUnreadDot: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#22c55e',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  annonceUnreadDotText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
   },
   annonceInfo: { flex: 1 },
   annonceTitle: { fontSize: 16, fontWeight: '800', color: '#1e293b' },
+  annonceTitleUnread: { color: '#0f172a', fontWeight: '900' },
   annonceSubtitle: { fontSize: 13, color: '#64748b', marginTop: 2, fontWeight: '500' },
   acceptedBadge: {
     backgroundColor: '#dcfce7',
@@ -363,18 +466,55 @@ const styles = StyleSheet.create({
     opacity: 0.85,
     backgroundColor: '#f8fafc'
   },
-  avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  convCardUnread: {
+    backgroundColor: '#f0f9ff',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0ea5e9',
+    borderColor: '#bae6fd',
+  },
+
+  // Avatar with unread dot
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  avatarUnread: {
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   avatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: '#22c55e',
+    borderWidth: 2.5,
+    borderColor: '#fff',
+  },
+
   convInfo: { flex: 1, marginRight: 8 },
   locataireHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
-    flexWrap: 'wrap',
-    gap: 4
+    marginBottom: 2,
   },
-  name: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  name: { fontSize: 15, fontWeight: '600', color: '#1e293b', flex: 1, marginRight: 8 },
+  nameUnread: { fontWeight: '800', color: '#0f172a' },
+  timeText: { fontSize: 11, color: '#94a3b8' },
+  timeTextUnread: { color: '#0ea5e9', fontWeight: '700' },
+
   statusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -402,7 +542,29 @@ const styles = StyleSheet.create({
   statusBadgeTextDanger: {
     color: '#ef4444'
   },
-  lastMessage: { fontSize: 13, color: '#64748b', lineHeight: 18 },
+
+  // Bottom row with last message and unread badge
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lastMessage: { fontSize: 13, color: '#94a3b8', lineHeight: 18, flex: 1, marginRight: 8 },
+  lastMessageUnread: { color: '#334155', fontWeight: '600' },
+  unreadBadge: {
+    backgroundColor: '#22c55e',
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
   
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   emptyText: { marginTop: 15, color: '#94a3b8', fontSize: 16, textAlign: 'center', fontWeight: '500' }

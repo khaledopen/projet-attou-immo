@@ -25,7 +25,58 @@ const AddProperty = () => {
     rue: '',
     ville: 'Abidjan',
     codePostal: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
+
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const searchAddress = async (query: string) => {
+    setForm(prev => ({ ...prev, rue: query }));
+
+    if (query.trim().length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      setSearchingAddress(true);
+      const encodedQuery = encodeURIComponent(query + ', Abidjan');
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&addressdetails=1&limit=5&countrycodes=ci`,
+        {
+          headers: {
+            'User-Agent': 'AttouHome/1.0',
+          },
+        }
+      );
+      const data = await res.json();
+      setSuggestions(data);
+      setShowSuggestions(data.length > 0);
+    } catch (e) {
+      console.warn('Autocomplete search error:', e);
+    } finally {
+      setSearchingAddress(false);
+    }
+  };
+
+  const handleSelectAddress = (item: any) => {
+    const mainAddress = item.address.road || item.address.suburb || item.address.neighbourhood || item.display_name.split(',')[0];
+    const city = item.address.city || item.address.town || item.address.village || 'Abidjan';
+    
+    setForm(prev => ({
+      ...prev,
+      rue: mainAddress,
+      ville: city,
+      latitude: parseFloat(item.lat),
+      longitude: parseFloat(item.lon),
+    }));
+    
+    setShowSuggestions(false);
+  };
 
   const availableEquipments = [
     { id: 'Climatisation', label: '❄️ Climatisation' },
@@ -339,6 +390,8 @@ const AddProperty = () => {
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Localisation</Text>
+            
+            <Text style={styles.fieldLabel}>Ville</Text>
             <TextInput
               style={styles.input}
               placeholder="Ville (ex: Abidjan)"
@@ -346,13 +399,53 @@ const AddProperty = () => {
               value={form.ville}
               onChangeText={(v) => setForm({ ...form, ville: v })}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Rue / Quartier"
-              placeholderTextColor="#94a3b8"
-              value={form.rue}
-              onChangeText={(v) => setForm({ ...form, rue: v })}
-            />
+            
+            <Text style={styles.fieldLabel}>Rue / Quartier (Recherche et Autocomplétion)</Text>
+            <View style={{ position: 'relative', zIndex: 999 }}>
+              <TextInput
+                style={styles.input}
+                placeholder="Commencez à saisir la rue ou le quartier..."
+                placeholderTextColor="#94a3b8"
+                value={form.rue}
+                onChangeText={searchAddress}
+              />
+              {searchingAddress && (
+                <ActivityIndicator 
+                  size="small" 
+                  color="#0284c7" 
+                  style={{ position: 'absolute', right: 15, top: 18 }} 
+                />
+              )}
+              
+              {showSuggestions && suggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  {suggestions.map((item, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.suggestionItem,
+                        idx === suggestions.length - 1 && { borderBottomWidth: 0 }
+                      ]}
+                      onPress={() => handleSelectAddress(item)}
+                    >
+                      <Ionicons name="location-outline" size={16} color="#0284c7" style={{ marginRight: 8 }} />
+                      <Text style={styles.suggestionText} numberOfLines={2}>
+                        {item.display_name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+            
+            {form.latitude && form.longitude && (
+              <View style={styles.coordsBadge}>
+                <Ionicons name="checkmark-circle" size={16} color="#16a34a" style={{ marginRight: 6 }} />
+                <Text style={styles.coordsText}>
+                  Coordonnées GPS enregistrées : {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -404,7 +497,60 @@ const styles = StyleSheet.create({
   equipmentItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', minWidth: '47%' },
   equipmentItemActive: { backgroundColor: '#0284c7', borderColor: '#0284c7' },
   equipmentLabel: { fontSize: 13, fontWeight: '700', color: '#475569' },
-  equipmentLabelActive: { color: '#fff' }
+  equipmentLabelActive: { color: '#fff' },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 58,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+    maxHeight: 200,
+    overflow: 'hidden',
+    zIndex: 9999,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#334155',
+    flex: 1,
+  },
+  coordsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  coordsText: {
+    fontSize: 12,
+    color: '#166534',
+    fontWeight: '600',
+  },
 });
 
 export default AddProperty;

@@ -39,7 +39,12 @@ export default function TabLayout() {
           }
         });
         socketRef.current.emit('join', user.id);
-        socketRef.current.on('nouveau_message', () => {
+        socketRef.current.on('nouveau_message', (msg: any) => {
+          // Optimistic increment for instant badge update
+          if (String(msg?.expediteurId) !== String(user.id)) {
+            setUnreadCount((prev) => prev + 1);
+          }
+          // Then reconcile with the actual server count
           fetchUnreadCount();
         });
         socketRef.current.on('unread_count_update', () => {

@@ -185,16 +185,6 @@ const ProfileScreen = () => {
 
       {/* Menu */}
       <View style={styles.menu}>
-        <TouchableOpacity style={styles.menuItem} onPress={openEditModal}>
-          <View style={[styles.menuIconBox, { backgroundColor: '#f0f9ff' }]}>
-            <Ionicons name="person-outline" size={20} color="#0ea5e9" />
-          </View>
-          <View style={styles.menuTextBlock}>
-            <Text style={styles.menuText}>Paramètres du compte</Text>
-            <Text style={styles.menuSubText}>Nom, téléphone, type de bailleur</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
-        </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(tabs)/properties')}>
           <View style={[styles.menuIconBox, { backgroundColor: '#f0fdf4' }]}>

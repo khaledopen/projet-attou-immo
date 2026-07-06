@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,8 +16,28 @@ export default function ChatScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef(null);
   const socketRef = useRef(null);
+
+  // Listen for keyboard show/hide to scroll to end
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     setupChat();
@@ -74,17 +94,41 @@ export default function ChatScreen() {
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    const messageContent = newMessage.trim();
+    if (!messageContent) return;
+
+    // Clear input immediately so it feels ultra-fast
+    setNewMessage('');
+
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage = {
+      id: tempId,
+      contenu: messageContent,
+      expediteurId: userId,
+      conversationId: id,
+      dateEnvoi: new Date().toISOString(),
+      sending: true
+    };
+
+    // Optimistically update list
+    setMessages((prev) => [...prev, tempMessage]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+
     try {
       const res = await api.post(`/messages/${id}/messages`, {
-        contenu: newMessage
+        contenu: messageContent
       });
       
-      setMessages((prev) => [...prev, res.data]);
-      setNewMessage('');
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      // Replace temp message with server message
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === tempId ? res.data : msg))
+      );
     } catch (e) {
       console.error(e);
+      // Remove temp message and restore text
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      setNewMessage(messageContent);
+      Alert.alert('Erreur', 'Impossible d\'envoyer le message. Veuillez réessayer.');
     }
   };
 
@@ -92,7 +136,8 @@ export default function ChatScreen() {
 
   const renderItem = ({ item }) => {
     const isMe = item.expediteurId === userId;
-    const time = new Date(item.dateEnvoi).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(item.dateEnvoi);
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     
     let displayContent = item.contenu;
     let isSystem = false;
@@ -143,11 +188,13 @@ export default function ChatScreen() {
     }
 
     return (
-      <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.otherMessage]}>
+      <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.otherMessage, item.sending && { opacity: 0.6 }]}>
         <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.otherMessageText]}>
           {displayContent}
         </Text>
-        <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.otherTimeText]}>{time}</Text>
+        <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.otherTimeText]}>
+          {item.sending ? 'Envoi...' : time}
+        </Text>
       </View>
     );
   };
@@ -157,7 +204,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
@@ -168,7 +215,8 @@ export default function ChatScreen() {
       
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <FlatList
           ref={flatListRef}
@@ -176,7 +224,9 @@ export default function ChatScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
         />
 
         {isModerationWarn ? (
@@ -187,19 +237,22 @@ export default function ChatScreen() {
             </Text>
           </View>
         ) : (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Écrivez un message..."
-              placeholderTextColor="#64748b"
-              value={newMessage}
-              onChangeText={setNewMessage}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-              <Ionicons name="send" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <SafeAreaView edges={['bottom']} style={styles.inputSafeArea}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Écrivez un message..."
+                placeholderTextColor="#64748b"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+                onFocus={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 300)}
+              />
+              <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+                <Ionicons name="send" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -212,18 +265,18 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e2e8f0' },
   backButton: { padding: 5 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: 'bold', color: '#0f172a' },
-  list: { padding: 15, paddingBottom: 30 },
-  messageBubble: { maxWidth: '80%', padding: 15, borderRadius: 20, marginBottom: 10 },
+  list: { padding: 15, paddingBottom: 10 },
+  messageBubble: { maxWidth: '85%', padding: 12, paddingHorizontal: 14, borderRadius: 20, marginBottom: 10 },
   myMessage: { alignSelf: 'flex-end', backgroundColor: '#0ea5e9', borderBottomRightRadius: 5 },
   otherMessage: { alignSelf: 'flex-start', backgroundColor: '#e2e8f0', borderBottomLeftRadius: 5 },
   messageText: { fontSize: 15 },
   myMessageText: { color: '#fff' },
   otherMessageText: { color: '#0f172a' },
+  inputSafeArea: { backgroundColor: '#fff' },
   inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: '#fff', alignItems: 'flex-end', borderTopWidth: 1, borderColor: '#e2e8f0' },
-  timeText: { fontSize: 12, color: '#64748b', alignSelf: 'flex-end', marginTop: 4 },
-  myTimeText: { color: '#e0f7ff' },
-  otherTimeText: { color: '#64748b' },
-  // Ajout du contraste du texte de l'input (déjà blanc sur fond gris clair)
+  timeText: { fontSize: 11, color: '#64748b', alignSelf: 'flex-end', marginTop: 5 },
+  myTimeText: { color: 'rgba(255,255,255,0.7)' },
+  otherTimeText: { color: '#94a3b8' },
   input: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 10, maxHeight: 100, fontSize: 15, color: '#0f172a' },
   sendButton: { backgroundColor: '#0ea5e9', width: 45, height: 45, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginLeft: 10, marginBottom: 2 },
   systemContainer: { alignItems: 'center', marginVertical: 15, width: '100%' },
