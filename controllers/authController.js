@@ -270,11 +270,11 @@ exports.forgotPassword = async (req, res) => {
       return res.json({ message: 'Si votre e-mail correspond à un compte, un lien de réinitialisation vous a été envoyé.' });
     }
 
-    // Le jeton expire dans 1 heure. Signé avec process.env.JWT_SECRET + user.motDePasse
+    // Le jeton expire dans 30 minutes. Signé avec process.env.JWT_SECRET + user.motDePasse
     const token = jwt.sign(
       { id: user.id, action: 'reset-password' },
       process.env.JWT_SECRET + user.motDePasse,
-      { expiresIn: '1h' }
+      { expiresIn: '30m' }
     );
 
     const protocol = req.headers['x-forwarded-proto'] || 'http';
@@ -289,11 +289,64 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-exports.renderResetPasswordPage = (req, res) => {
+exports.renderResetPasswordPage = async (req, res) => {
   const { token, userId } = req.query;
 
   if (!token || !userId) {
     return res.status(400).send('Lien invalide. Paramètres manquants.');
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).send('Utilisateur non trouvé.');
+    }
+
+    // Vérifier si le token est valide et n'a pas expiré
+    jwt.verify(token, process.env.JWT_SECRET + user.motDePasse);
+  } catch (err) {
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AttouHome - Lien Expiré</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+          body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            font-family: 'Outfit', sans-serif;
+            text-align: center;
+          }
+          .container {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          }
+          h1 { color: #f87171; font-size: 24px; font-weight: 800; margin-bottom: 15px; }
+          p { color: #94a3b8; font-size: 14px; line-height: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Lien expiré ou invalide ⚠️</h1>
+          <p>Ce lien de réinitialisation du mot de passe a expiré (validité de 30 minutes) ou a déjà été utilisé. Veuillez refaire une demande depuis l'application mobile.</p>
+        </div>
+      </body>
+      </html>
+    `);
   }
 
   // Affiche une interface premium de réinitialisation du mot de passe

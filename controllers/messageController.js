@@ -26,6 +26,15 @@ exports.getConversations = async (req, res) => {
 
     const conversationsWithStatus = await Promise.all(
       conversations.map(async (conv) => {
+        // Count unread messages for this conversation (messages NOT sent by the current user)
+        const unreadCount = await prisma.message.count({
+          where: {
+            conversationId: conv.id,
+            expediteurId: { not: userId },
+            lu: false
+          }
+        });
+
         if (conv.annonceId) {
           const visite = await prisma.demandeVisite.findFirst({
             where: {
@@ -36,10 +45,11 @@ exports.getConversations = async (req, res) => {
           });
           return {
             ...conv,
-            statutVisite: visite ? visite.statut : null
+            statutVisite: visite ? visite.statut : null,
+            unreadCount
           };
         }
-        return { ...conv, statutVisite: null };
+        return { ...conv, statutVisite: null, unreadCount };
       })
     );
 
