@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { playMessageSound } from '../../utils/notificationSound';
 
 export default function MessagesScreen() {
   const [conversations, setConversations] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
@@ -63,7 +64,16 @@ export default function MessagesScreen() {
 
           socketRef.current.on('nouveau_message', (msg) => {
             if (active) {
-              playMessageSound();
+              // Play sound only for messages from others
+              if (String(msg.expediteurId) !== String(user.id)) {
+                playMessageSound();
+              }
+              fetchConversations();
+            }
+          });
+
+          socketRef.current.on('unread_count_update', () => {
+            if (active) {
               fetchConversations();
             }
           });
@@ -112,9 +122,31 @@ export default function MessagesScreen() {
     );
   }
 
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    } else if (diffDays === 1) {
+      return 'Hier';
+    } else if (diffDays < 7) {
+      const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+      return days[date.getDay()];
+    } else {
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    }
+  };
+
   const renderItem = ({ item }) => {
     const interlocuteur = item.proprietaire;
-    let lastMessage = item.messages?.[0]?.contenu || 'Nouvelle conversation';
+    const hasUnread = item.unreadCount > 0;
+    const lastMsg = item.messages?.[0];
+    let lastMessage = lastMsg?.contenu || 'Nouvelle conversation';
+    const lastTime = lastMsg?.dateEnvoi || item.dateMiseAJour;
 
     if (lastMessage.startsWith('SYSTEM_PENDING|')) {
       const parts = lastMessage.split('|');
@@ -129,15 +161,28 @@ export default function MessagesScreen() {
 
     return (
       <TouchableOpacity 
-        style={styles.convCard} 
+        style={[styles.convCard, hasUnread && styles.convCardUnread]} 
         onPress={() => router.push(`/chat/${item.id}`)}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{interlocuteur.prenom[0]}</Text>
+        {/* Avatar with online-style indicator */}
+        <View style={styles.avatarContainer}>
+          <View style={[styles.avatar, hasUnread && styles.avatarUnread]}>
+            <Text style={styles.avatarText}>{interlocuteur.prenom[0]}</Text>
+          </View>
+          {hasUnread && <View style={styles.onlineDot} />}
         </View>
+
         <View style={styles.convInfo}>
-          <Text style={styles.name}>{interlocuteur.prenom} {interlocuteur.nom}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+          <View style={styles.topRow}>
+            <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
+              {interlocuteur.prenom} {interlocuteur.nom}
+            </Text>
+            <Text style={[styles.timeText, hasUnread && styles.timeTextUnread]}>
+              {formatTime(lastTime)}
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
             <Text style={styles.property} numberOfLines={1}>{item.annonce?.titre}</Text>
             {item.statutVisite && (
               <View style={[
@@ -153,24 +198,67 @@ export default function MessagesScreen() {
               </View>
             )}
           </View>
-          <Text style={styles.lastMessage} numberOfLines={1}>{lastMessage}</Text>
+
+          <View style={styles.bottomRow}>
+            <Text style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} numberOfLines={1}>
+              {lastMessage}
+            </Text>
+            {hasUnread && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>
+                  {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
       </TouchableOpacity>
     );
   };
 
+  const filteredConversations = conversations.filter((item) => {
+    const interlocuteur = item.proprietaire;
+    const fullName = `${interlocuteur?.prenom || ''} ${interlocuteur?.nom || ''}`.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    const annonceTitre = item.annonce?.titre?.toLowerCase() || '';
+    return fullName.includes(query) || annonceTitre.includes(query);
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.headerTitle}>Messagerie</Text>
+      
+      {conversations.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher un propriétaire ou un bien..."
+            placeholderTextColor="#94a3b8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#94a3b8" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {conversations.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubbles-outline" size={50} color="#94a3b8" />
           <Text style={styles.emptyText}>Aucune conversation en cours.</Text>
         </View>
+      ) : filteredConversations.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={50} color="#94a3b8" />
+          <Text style={styles.emptyText}>Aucun résultat pour "{searchQuery}"</Text>
+        </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={filteredConversations}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
@@ -183,13 +271,97 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', padding: 20, color: '#0f172a' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', padding: 20, paddingBottom: 10, color: '#0f172a' },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0f172a',
+    padding: 0,
+  },
   list: { paddingHorizontal: 20 },
-  convCard: { flexDirection: 'row', backgroundColor: '#fff', padding: 15, borderRadius: 15, marginBottom: 15, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+
+  // Conversation card
+  convCard: { 
+    flexDirection: 'row', 
+    backgroundColor: '#fff', 
+    padding: 15, 
+    borderRadius: 15, 
+    marginBottom: 12, 
+    alignItems: 'center', 
+    shadowColor: '#000', 
+    shadowOpacity: 0.05, 
+    shadowRadius: 10, 
+    elevation: 2,
+    borderLeftWidth: 0,
+    borderLeftColor: 'transparent',
+  },
+  convCardUnread: {
+    backgroundColor: '#f0f9ff',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0ea5e9',
+  },
+
+  // Avatar with unread dot
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
+  avatar: { 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    backgroundColor: '#0ea5e9', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+  },
+  avatarUnread: {
+    backgroundColor: '#0284c7',
+  },
   avatarText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 1,
+    right: 1,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#22c55e',
+    borderWidth: 2.5,
+    borderColor: '#fff',
+  },
+
+  // Conversation info
   convInfo: { flex: 1 },
-  name: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  name: { fontSize: 16, fontWeight: '600', color: '#1e293b', flex: 1, marginRight: 8 },
+  nameUnread: { fontWeight: '800', color: '#0f172a' },
+  timeText: { fontSize: 12, color: '#94a3b8' },
+  timeTextUnread: { color: '#0ea5e9', fontWeight: '700' },
+
   property: { fontSize: 12, color: '#0ea5e9', flexShrink: 1 },
   miniBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 6 },
   badgeSuccess: { backgroundColor: '#dcfce7' },
@@ -199,7 +371,31 @@ const styles = StyleSheet.create({
   badgeTextSuccess: { color: '#15803d' },
   badgeTextDanger: { color: '#ef4444' },
   badgeTextPending: { color: '#c2410c' },
-  lastMessage: { fontSize: 14, color: '#64748b' },
+
+  // Bottom row with last message and unread badge
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lastMessage: { fontSize: 14, color: '#94a3b8', flex: 1, marginRight: 8 },
+  lastMessageUnread: { color: '#334155', fontWeight: '600' },
+  unreadBadge: {
+    backgroundColor: '#22c55e',
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  // Empty & unauth states
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
   emptyText: { marginTop: 15, color: '#64748b', fontSize: 16 },
   unauthIconWrapper: { width: 90, height: 90, backgroundColor: '#f0f9ff', borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },

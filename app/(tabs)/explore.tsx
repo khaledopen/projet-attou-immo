@@ -21,21 +21,7 @@ import * as Location from 'expo-location';
 // Centrage par défaut sur Abidjan, Côte d'Ivoire
 const ABIDJAN_LAT = 5.3484;
 const ABIDJAN_LNG = -3.9733;
-
-let MapView: any = null;
-let Marker: any = null;
-let Polyline: any = null;
-
-if (Platform.OS !== 'web') {
-  try {
-    const MapModule = require('react-native-maps');
-    MapView = MapModule.default;
-    Marker = MapModule.Marker;
-    Polyline = MapModule.Polyline;
-  } catch (error) {
-    console.warn('Failed to load react-native-maps:', error);
-  }
-}
+import MapView, { Marker, Polyline } from '../../components/MapComponents';
 
 export default function ExploreMapScreen() {
   const router = useRouter();
@@ -152,6 +138,14 @@ export default function ExploreMapScreen() {
           accuracy: Location.Accuracy.Balanced,
         });
         setUserLocation(location);
+        
+        // Vérifier si l'utilisateur est proche de la zone d'Abidjan
+        const isNearAbidjan = 
+          location.coords.latitude >= 5.0 && 
+          location.coords.latitude <= 5.6 && 
+          location.coords.longitude >= -4.3 && 
+          location.coords.longitude <= -3.5;
+
         if (Platform.OS !== 'web' && mapRef.current) {
           mapRef.current.animateToRegion({
             latitude: location.coords.latitude,
@@ -160,8 +154,13 @@ export default function ExploreMapScreen() {
             longitudeDelta: 0.03,
           }, 1000);
         } else {
-          setWebCenterLat(location.coords.latitude);
-          setWebCenterLng(location.coords.longitude);
+          if (isNearAbidjan) {
+            setWebCenterLat(location.coords.latitude);
+            setWebCenterLng(location.coords.longitude);
+          } else {
+            setWebCenterLat(ABIDJAN_LAT);
+            setWebCenterLng(ABIDJAN_LNG);
+          }
         }
       }
     } catch (e) {

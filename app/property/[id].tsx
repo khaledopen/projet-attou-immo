@@ -177,9 +177,21 @@ const PropertyDetails = () => {
 
       setShowCalendar(false);
       Alert.alert('Succès', 'Votre demande de visite a été envoyée au propriétaire !');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Visite erreur:', error);
-      Alert.alert('Erreur', 'Impossible d\'envoyer la demande.');
+      if (error?.response?.status === 409) {
+        setShowCalendar(false);
+        Alert.alert(
+          'Demande déjà existante',
+          'Vous avez déjà une demande de visite en cours ou acceptée pour ce bien. Consultez vos messages pour suivre l\'état de votre demande.',
+          [
+            { text: 'Voir mes messages', onPress: () => router.push('/(tabs)/messages') },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      } else {
+        Alert.alert('Erreur', 'Impossible d\'envoyer la demande. Vérifiez votre connexion et réessayez.');
+      }
     } finally {
       setRequesting(false);
     }
@@ -314,8 +326,10 @@ const PropertyDetails = () => {
             </View>
           ) : (
             <TouchableOpacity style={styles.reportAdButton} onPress={handleReportAd}>
-              <Ionicons name="flag-outline" size={16} color="#ef4444" />
-              <Text style={styles.reportAdText}>Signaler cette annonce (Photo malveillante ou inappropriée)</Text>
+              <View style={styles.reportAdIconWrapper}>
+                <Ionicons name="flag-outline" size={14} color="#ef4444" />
+              </View>
+              <Text style={styles.reportAdText} numberOfLines={2}>Signaler cette annonce</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -519,8 +533,9 @@ const styles = StyleSheet.create({
   unauthRegisterBtn: { backgroundColor: '#fff', width: '100%', paddingVertical: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#e2e8f0' },
   unauthRegisterBtnText: { color: '#0ea5e9', fontSize: 16, fontWeight: '700' },
   backButtonUnauth: { position: 'absolute', top: 50, left: 20, backgroundColor: '#fff', padding: 10, borderRadius: 15, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  reportAdButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', paddingVertical: 14, borderRadius: 15, borderWidth: 1, borderColor: '#fee2e2', marginTop: 15, marginBottom: 25 },
-  reportAdText: { color: '#ef4444', fontSize: 13, fontWeight: '700', marginLeft: 8 },
+  reportAdButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: '#fee2e2', marginTop: 15, marginBottom: 25, gap: 8, alignSelf: 'center' },
+  reportAdIconWrapper: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#fee2e2', justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  reportAdText: { color: '#ef4444', fontSize: 13, fontWeight: '700', flexShrink: 1 },
   reportSection: { backgroundColor: '#fee2e2', padding: 15, borderRadius: 15, marginBottom: 20, borderWidth: 1, borderColor: '#fca5a5' },
   reportTitle: { color: '#dc2626', fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
   reportReason: { color: '#7f1d1d', fontSize: 14, lineHeight: 20 }

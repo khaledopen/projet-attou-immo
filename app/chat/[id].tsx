@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -88,23 +88,48 @@ export default function ChatScreen() {
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    const messageContent = newMessage.trim();
+    if (!messageContent) return;
+
+    // Clear input immediately so it feels ultra-fast
+    setNewMessage('');
+
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage = {
+      id: tempId,
+      contenu: messageContent,
+      expediteurId: userId,
+      conversationId: id,
+      dateEnvoi: new Date().toISOString(),
+      sending: true
+    };
+
+    // Optimistically update list
+    setMessages((prev) => [...prev, tempMessage]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+
     try {
       const res = await api.post(`/messages/${id}/messages`, {
-        contenu: newMessage
+        contenu: messageContent
       });
       
-      setMessages((prev) => [...prev, res.data]);
-      setNewMessage('');
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      // Replace temp message with server message
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === tempId ? res.data : msg))
+      );
     } catch (e) {
       console.error(e);
+      // Remove temp message and restore text
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      setNewMessage(messageContent);
+      Alert.alert('Erreur', 'Impossible d\'envoyer le message. Veuillez réessayer.');
     }
   };
 
   const renderItem = ({ item }) => {
     const isMe = item.expediteurId === userId;
-    const time = new Date(item.dateEnvoi).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(item.dateEnvoi);
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     
     let displayContent = item.contenu;
     let isSystem = false;
@@ -138,11 +163,13 @@ export default function ChatScreen() {
     }
 
     return (
-      <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.otherMessage]}>
+      <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.otherMessage, item.sending && { opacity: 0.6 }]}>
         <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.otherMessageText]}>
           {displayContent}
         </Text>
-        <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.otherTimeText]}>{time}</Text>
+        <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.otherTimeText]}>
+          {item.sending ? 'Envoi...' : time}
+        </Text>
       </View>
     );
   };
@@ -217,15 +244,15 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a' },
   headerSubtitle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
   list: { padding: 15, paddingBottom: 30 },
-  messageBubble: { maxWidth: '80%', padding: 15, borderRadius: 20, marginBottom: 10 },
+  messageBubble: { maxWidth: '85%', padding: 12, paddingHorizontal: 14, borderRadius: 20, marginBottom: 10 },
   myMessage: { alignSelf: 'flex-end', backgroundColor: '#0ea5e9', borderBottomRightRadius: 5 },
   otherMessage: { alignSelf: 'flex-start', backgroundColor: '#e2e8f0', borderBottomLeftRadius: 5 },
   messageText: { fontSize: 15 },
   myMessageText: { color: '#fff' },
   otherMessageText: { color: '#0f172a' },
-  timeText: { fontSize: 12, color: '#64748b', alignSelf: 'flex-end', marginTop: 4 },
-  myTimeText: { color: '#e0f7ff' },
-  otherTimeText: { color: '#64748b' },
+  timeText: { fontSize: 11, color: '#64748b', alignSelf: 'flex-end', marginTop: 5 },
+  myTimeText: { color: 'rgba(255,255,255,0.7)' },
+  otherTimeText: { color: '#94a3b8' },
   input: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 10, maxHeight: 100, fontSize: 15, color: '#0f172a' },
   inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: '#fff', alignItems: 'flex-end', borderTopWidth: 1, borderColor: '#e2e8f0' },
   sendButton: { backgroundColor: '#0ea5e9', width: 45, height: 45, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginLeft: 10, marginBottom: 2 },
