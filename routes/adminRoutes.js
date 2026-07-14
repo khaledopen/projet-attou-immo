@@ -9,10 +9,14 @@ const {
   getVisits,
   updateUserStatus
 } = require('../controllers/adminController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Public/Admin endpoint access (no auth middleware for now to facilitate instant setup and testing, but fully secure backend-ready)
+// Appliquer la protection et l'autorisation ADMIN à toutes les routes d'administration
+router.use(protect);
+router.use(authorize('ADMIN'));
+
 router.get('/stats', getStats);
 router.get('/users', getUsers);
 router.get('/properties', getProperties);
