@@ -5,7 +5,7 @@ import axios from 'axios';
 import { BASE_URL } from '../api/config';
 import { io } from 'socket.io-client';
 
-const Sidebar = () => {
+const Sidebar = ({ onLogout, user }) => {
   const location = useLocation();
   const [moderationCount, setModerationCount] = useState(0);
 
@@ -119,17 +119,19 @@ const Sidebar = () => {
       <div className="p-6 border-t border-slate-100 bg-slate-50/50">
         <div className="flex items-center gap-4 mb-6 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="w-11 h-11 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-black text-lg border border-primary-200">
-            A
+            {user ? `${user.prenom?.[0] || ''}${user.nom?.[0] || ''}`.toUpperCase() || 'A' : 'A'}
           </div>
           <div className="flex-1 overflow-hidden">
-            <h4 className="text-slate-900 font-bold text-sm truncate">Admin Principal</h4>
-            <p className="text-slate-400 text-xs truncate">admin@attounest.com</p>
+            <h4 className="text-slate-900 font-bold text-sm truncate">
+              {user ? `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Admin Principal' : 'Admin Principal'}
+            </h4>
+            <p className="text-slate-400 text-xs truncate">{user?.email || 'admin@attounest.com'}</p>
           </div>
         </div>
 
         <button 
-          onClick={() => alert('Déconnexion réussie')}
-          className="flex items-center justify-center gap-3 px-5 py-4 w-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all duration-300 font-bold border border-transparent hover:border-rose-100 shadow-sm hover:shadow"
+          onClick={onLogout}
+          className="flex items-center justify-center gap-3 px-5 py-4 w-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all duration-300 font-bold border border-transparent hover:border-rose-100 shadow-sm hover:shadow cursor-pointer"
         >
           <LogOut size={20} />
           <span>Déconnexion</span>
