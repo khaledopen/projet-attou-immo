@@ -10,6 +10,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { playNotificationSound } from '../../utils/notificationSound';
 
+const TypewriterText = ({ text, style }: { text: string; style: any }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    let index = 0;
+    setDisplayedText('');
+    const intervalId = setInterval(() => {
+      setDisplayedText((prev) => {
+        if (index < text.length) {
+          const nextChar = text.charAt(index);
+          index++;
+          return prev + nextChar;
+        } else {
+          clearInterval(intervalId);
+          return prev;
+        }
+      });
+    }, 120);
+    return () => clearInterval(intervalId);
+  }, [text]);
+
+  return <Text style={style}>{displayedText}</Text>;
+};
+
 const ExplorerScreen = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -254,7 +278,7 @@ const ExplorerScreen = () => {
       >
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.welcomeText}>Bonjour 👋</Text>
+            <TypewriterText text="Bonjour" style={styles.welcomeText} />
             <Text style={styles.brandText} numberOfLines={1}>Trouvez votre logement</Text>
           </View>
           <TouchableOpacity style={styles.notificationBadge} onPress={handleNotificationPress}>
