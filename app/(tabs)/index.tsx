@@ -5,6 +5,30 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../api/axiosInstance';
 
+const TypewriterText = ({ text, style }: { text: string; style: any }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    let index = 0;
+    setDisplayedText('');
+    const intervalId = setInterval(() => {
+      setDisplayedText((prev) => {
+        if (index < text.length) {
+          const nextChar = text.charAt(index);
+          index++;
+          return prev + nextChar;
+        } else {
+          clearInterval(intervalId);
+          return prev;
+        }
+      });
+    }, 120);
+    return () => clearInterval(intervalId);
+  }, [text]);
+
+  return <Text style={style}>{displayedText}</Text>;
+};
+
 const OwnerDashboard = () => {
   const router = useRouter();
   const [stats, setStats] = useState({ properties: 0, visits: 0 });
@@ -82,7 +106,7 @@ const OwnerDashboard = () => {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.welcomeText}>👋 Bienvenue,</Text>
+          <TypewriterText text="Bonjour," style={styles.welcomeText} />
           <Text style={styles.brandText}>{user ? `${user.prenom} ${user.nom}` : 'Propriétaire'}</Text>
         </View>
         <TouchableOpacity 
