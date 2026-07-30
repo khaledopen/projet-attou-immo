@@ -36,7 +36,7 @@ exports.register = async (req, res) => {
       expiresIn: '2h',
     });
     const refreshToken = jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, process.env.JWT_SECRET, {
-      expiresIn: '2h',
+      expiresIn: '7d',
     });
 
     res.status(201).json({ 
@@ -80,7 +80,7 @@ exports.login = async (req, res) => {
       expiresIn: '2h',
     });
     const refreshToken = jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, process.env.JWT_SECRET, {
-      expiresIn: '2h',
+      expiresIn: '7d',
     });
 
     res.json({ 
@@ -243,7 +243,7 @@ exports.refreshToken = async (req, res) => {
       expiresIn: '2h',
     });
     const newRefreshToken = jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, process.env.JWT_SECRET, {
-      expiresIn: '2h',
+      expiresIn: '7d',
     });
 
     res.json({
