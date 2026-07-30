@@ -2,14 +2,27 @@ import React, { useEffect } from 'react';
 import { StyleSheet, View, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Index() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirige vers la page de connexion après 1,5 seconde
+    const checkAuthAndNavigate = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/login');
+        }
+      } catch (e) {
+        router.replace('/login');
+      }
+    };
+
     const timer = setTimeout(() => {
-      router.replace('/login');
+      checkAuthAndNavigate();
     }, 1500);
 
     return () => clearTimeout(timer);

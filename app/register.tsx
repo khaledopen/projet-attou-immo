@@ -211,8 +211,8 @@ const RegisterScreen = () => {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>Informations Personnelles</Text>
             <View style={styles.row}>
-              <TextInput style={[styles.input, { flex: 1, marginRight: 10 }]} placeholder="Prénom" placeholderTextColor="#64748b" value={form.prenom} onChangeText={(v) => setForm({...form, prenom: v})} />
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nom" placeholderTextColor="#64748b" value={form.nom} onChangeText={(v) => setForm({...form, nom: v})} />
+              <TextInput style={[styles.input, { flex: 1, marginRight: 10, minWidth: 0 }]} placeholder="Prénom" placeholderTextColor="#64748b" value={form.prenom} onChangeText={(v) => setForm({...form, prenom: v})} />
+              <TextInput style={[styles.input, { flex: 1, minWidth: 0 }]} placeholder="Nom" placeholderTextColor="#64748b" value={form.nom} onChangeText={(v) => setForm({...form, nom: v})} />
             </View>
             <TextInput style={styles.input} placeholder="Email Pro" placeholderTextColor="#64748b" keyboardType="email-address" autoCapitalize="none" value={form.email} onChangeText={(v) => setForm({...form, email: v})} />
             <TextInput style={styles.input} placeholder="Téléphone" placeholderTextColor="#64748b" keyboardType="phone-pad" value={form.telephone} onChangeText={(v) => setForm({...form, telephone: v})} />

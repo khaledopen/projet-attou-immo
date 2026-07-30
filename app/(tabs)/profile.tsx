@@ -73,17 +73,25 @@ const ProfileScreen = () => {
   }, [navigation]);
 
   const handleLogout = async () => {
-    Alert.alert('Déconnexion', 'Se déconnecter de AttouHome Pro ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { 
-        text: 'Déconnexion', 
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.multiRemove(['userToken', 'userData']);
-          router.replace('/login');
-        }
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('Se déconnecter de AttouHome Pro ?');
+      if (confirmLogout) {
+        await AsyncStorage.multiRemove(['userToken', 'userData']);
+        router.replace('/login');
       }
-    ]);
+    } else {
+      Alert.alert('Déconnexion', 'Se déconnecter de AttouHome Pro ?', [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Déconnexion', 
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.multiRemove(['userToken', 'userData']);
+            router.replace('/login');
+          }
+        }
+      ]);
+    }
   };
 
   const openEditModal = () => {
