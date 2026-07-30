@@ -136,17 +136,25 @@ const ProfileScreen = () => {
   }, [navigation]);
 
   const handleLogout = async () => {
-    Alert.alert('Déconnexion', 'Souhaitez-vous vous déconnecter ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { 
-        text: 'Déconnexion', 
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.multiRemove(['userToken', 'userData']);
-          router.replace('/(tabs)');
-        }
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('Souhaitez-vous vous déconnecter ?');
+      if (confirmLogout) {
+        await AsyncStorage.multiRemove(['userToken', 'userData']);
+        router.replace('/(tabs)');
       }
-    ]);
+    } else {
+      Alert.alert('Déconnexion', 'Souhaitez-vous vous déconnecter ?', [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Déconnexion', 
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.multiRemove(['userToken', 'userData']);
+            router.replace('/(tabs)');
+          }
+        }
+      ]);
+    }
   };
 
   const openEditModal = () => {

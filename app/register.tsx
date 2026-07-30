@@ -56,11 +56,7 @@ const RegisterScreen = () => {
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(user));
         Alert.alert('Connexion Google réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-        if (redirectTo) {
-          router.replace(redirectTo as any);
-        } else {
-          router.replace('/(tabs)');
-        }
+        router.replace('/(tabs)');
       } catch (loginErr: any) {
         console.log('[Google] User not found, registering…');
         // Nouveau compte → inscription automatique
@@ -84,11 +80,7 @@ const RegisterScreen = () => {
           await AsyncStorage.setItem('userToken', token);
           await AsyncStorage.setItem('userData', JSON.stringify(user));
           Alert.alert('Inscription Google réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-          if (redirectTo) {
-            router.replace(redirectTo as any);
-          } else {
-            router.replace('/(tabs)');
-          }
+          router.replace('/(tabs)');
         } catch (regErr: any) {
           console.log('[Google] Register failed:', regErr?.response?.data || regErr?.message);
           const errMsg = regErr.response?.data?.message || regErr.message || '';
@@ -127,11 +119,7 @@ const RegisterScreen = () => {
       await AsyncStorage.setItem('userToken', data.token);
       await AsyncStorage.setItem('userData', JSON.stringify(data.user));
       // Redirection directe sans repasser par login
-      if (redirectTo) {
-        router.replace(redirectTo as any);
-      } else {
-        router.replace('/(tabs)');
-      }
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Register error:', error);
       let msg = 'Problème de connexion au serveur.';
@@ -215,14 +203,14 @@ const RegisterScreen = () => {
           <View style={styles.card}>
             <View style={styles.row}>
               <TextInput
-                style={[styles.input, { flex: 1, marginRight: 10 }]}
+                style={[styles.input, { flex: 1, marginRight: 10, minWidth: 0 }]}
                 placeholder="Prénom"
                 placeholderTextColor="#94a3b8"
                 value={form.prenom}
                 onChangeText={(v) => setForm({ ...form, prenom: v })}
               />
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, { flex: 1, minWidth: 0 }]}
                 placeholder="Nom"
                 placeholderTextColor="#94a3b8"
                 value={form.nom}

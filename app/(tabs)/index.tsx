@@ -365,49 +365,55 @@ const ExplorerScreen = () => {
         visible={showAuthModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => {}}
+        onRequestClose={() => setShowAuthModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalIndicator} />
-            
-            <View style={styles.modalIconContainer}>
-              <Ionicons name="lock-closed" size={32} color="#0ea5e9" />
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowAuthModal(false)}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalIndicator} />
+              
+              <View style={styles.modalIconContainer}>
+                <Ionicons name="lock-closed" size={32} color="#0ea5e9" />
+              </View>
+
+              <Text style={styles.modalTitle}>Rejoignez AttouHome ✨</Text>
+              <Text style={styles.modalSubtitle}>
+                Connectez-vous ou créez un compte gratuitement en quelques secondes pour voir les détails complets de cette annonce, planifier des visites et contacter le propriétaire.
+              </Text>
+
+              <TouchableOpacity 
+                style={styles.modalPrimaryBtn} 
+                onPress={() => {
+                  setShowAuthModal(false);
+                  router.push('/login');
+                }}
+              >
+                <Text style={styles.modalPrimaryBtnText}>Se connecter</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.modalSecondaryBtn} 
+                onPress={() => {
+                  setShowAuthModal(false);
+                  router.push('/register');
+                }}
+              >
+                <Text style={styles.modalSecondaryBtnText}>Créer un compte</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.modalCloseBtn} 
+                onPress={() => setShowAuthModal(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>Continuer la visite</Text>
+              </TouchableOpacity>
             </View>
-
-            <Text style={styles.modalTitle}>Rejoignez AttouHome ✨</Text>
-            <Text style={styles.modalSubtitle}>
-              Connectez-vous ou créez un compte gratuitement en quelques secondes pour voir les détails complets de cette annonce, planifier des visites et contacter le propriétaire.
-            </Text>
-
-            <TouchableOpacity 
-              style={styles.modalPrimaryBtn} 
-              onPress={() => {
-                setShowAuthModal(false);
-                router.push('/login');
-              }}
-            >
-              <Text style={styles.modalPrimaryBtnText}>Se connecter</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.modalSecondaryBtn} 
-              onPress={() => {
-                setShowAuthModal(false);
-                router.push('/register');
-              }}
-            >
-              <Text style={styles.modalSecondaryBtnText}>Créer un compte</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.modalCloseBtn} 
-              onPress={() => setShowAuthModal(false)}
-            >
-              <Text style={styles.modalCloseBtnText}>Continuer la visite</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* Price Filter Modal */}
@@ -420,7 +426,7 @@ const ExplorerScreen = () => {
         <TouchableOpacity 
           style={styles.modalOverlay} 
           activeOpacity={1} 
-          onPress={() => { Keyboard.dismiss(); }}
+          onPress={() => { Keyboard.dismiss(); setShowFilterModal(false); }}
         >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -50,11 +50,7 @@ const LoginScreen = () => {
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(user));
         Alert.alert('Connexion réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-        if (redirectTo) {
-          router.replace(redirectTo as any);
-        } else {
-          router.replace('/(tabs)');
-        }
+        router.replace('/(tabs)');
       } catch (loginErr: any) {
         console.log('[Google] User not found, registering…');
         // Nouveau compte → inscription automatique
@@ -78,11 +74,7 @@ const LoginScreen = () => {
           await AsyncStorage.setItem('userToken', token);
           await AsyncStorage.setItem('userData', JSON.stringify(user));
           Alert.alert('Inscription réussie ! 🎉', `Bienvenue ${user.prenom} ${user.nom}`);
-          if (redirectTo) {
-            router.replace(redirectTo as any);
-          } else {
-            router.replace('/(tabs)');
-          }
+          router.replace('/(tabs)');
         } catch (regErr: any) {
           console.log('[Google] Register failed:', regErr?.response?.data || regErr?.message);
           const errMsg = regErr.response?.data?.message || regErr.message || '';
@@ -115,11 +107,7 @@ const LoginScreen = () => {
       const { token, user } = response.data;
       await AsyncStorage.setItem('userToken', token);
       await AsyncStorage.setItem('userData', JSON.stringify(user));
-      if (redirectTo) {
-        router.replace(redirectTo as any);
-      } else {
-        router.replace('/(tabs)');
-      }
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.log('Login error:', error.response?.data || error.message);
       let msg = 'Email ou mot de passe incorrect.';
