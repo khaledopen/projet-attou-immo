@@ -61,8 +61,10 @@ app.use((req, res, next) => {
 });
 
 // Route de base
+const publicDir = path.join(__dirname , 'public');
+app.use(express.static(publicDir));
 app.get('/', (req, res) => {
-  res.send('AttouNest API is running...');
+  res.sendFile(path.join(publicDir , 'index.html'));
 });
 
 // Documentation Swagger
